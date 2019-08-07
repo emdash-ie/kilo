@@ -70,7 +70,7 @@ char editorReadKey() {
     if (read(STDIN_FILENO, &seq[0], 1) != 1) return '\x1b';
     if (read(STDIN_FILENO, &seq[1], 1) != 1) return '\x1b';
 
-    if (seq[0] == '[') {
+    if (seq[0] == '[' || seq[0] == 'O') {
       switch (seq[1]) {
       case 'A': return 'k';
       case 'B': return 'j';
