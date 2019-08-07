@@ -14,6 +14,13 @@
 #define CTRL_KEY(k) ((k) & 0x1f)
 #define KIBI_VERSION "0.0.1"
 
+enum editorKey {
+  ARROW_LEFT = 1000,
+  ARROW_RIGHT,
+  ARROW_DOWN,
+  ARROW_UP
+};
+
 /*** data ***/
 
 struct editorConfig {
@@ -59,7 +66,7 @@ void enableRawMode() {
   }
 }
 
-char editorReadKey() {
+int editorReadKey() {
   int nread;
   char c;
   while ((nread = read(STDIN_FILENO, &c, 1)) != 1) {
@@ -72,10 +79,10 @@ char editorReadKey() {
 
     if (seq[0] == '[' || seq[0] == 'O') {
       switch (seq[1]) {
-      case 'A': return 'k';
-      case 'B': return 'j';
-      case 'C': return 'l';
-      case 'D': return 'h';
+      case 'A': return ARROW_UP;
+      case 'B': return ARROW_DOWN;
+      case 'C': return ARROW_RIGHT;
+      case 'D': return ARROW_LEFT;
       }
     }
     return '\x1b';
@@ -188,25 +195,25 @@ void editorRefreshScreen() {
 
 /*** input ***/
 
-void editorMoveCursor(char key) {
+void editorMoveCursor(int key) {
   switch (key) {
-  case 'j':
+  case ARROW_DOWN:
     editor.cursorY++;
     break;
-  case 'k':
+  case ARROW_UP:
     editor.cursorY--;
     break;
-  case 'l':
+  case ARROW_RIGHT:
     editor.cursorX++;
     break;
-  case 'h':
+  case ARROW_LEFT:
     editor.cursorX--;
     break;
   }
 }
 
 void editorProcessKeypress() {
-  char c = editorReadKey();
+  int c = editorReadKey();
 
   switch (c) {
   case CTRL_KEY('q'):
@@ -214,10 +221,10 @@ void editorProcessKeypress() {
     write(STDOUT_FILENO, "\x1b[H", 3);
     exit(0);
     break;
-  case 'j':
-  case 'k':
-  case 'l':
-  case 'h':
+  case ARROW_DOWN:
+  case ARROW_UP:
+  case ARROW_RIGHT:
+  case ARROW_LEFT:
     editorMoveCursor(c);
     break;
   }
