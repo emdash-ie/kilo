@@ -59,6 +59,7 @@ typedef struct EditorConfig {
   char *filename;
   char statusMessage[80];
   time_t statusMessageTime;
+  int unsavedChanges;
   struct termios original_termios;
 } EditorConfig;
 
@@ -225,6 +226,7 @@ void editorAppendRow(char *s, size_t length) {
   editor.rows[new].renderChars = NULL;
   editorUpdateRow(&editor.rows[new]);
   editor.numberOfRows++;
+  editor.unsavedChanges++;
 }
 
 void editorRowInsertChar(EditorRow *row, int at, int c) {
@@ -234,6 +236,7 @@ void editorRowInsertChar(EditorRow *row, int at, int c) {
   row->size++;
   row->chars[at] = c;
   editorUpdateRow(row);
+  editor.unsavedChanges++;
 }
 
 /*** editor operations ***/
@@ -283,6 +286,7 @@ void editorOpen(char *filename) {
   }
   free(line);
   fclose(fp);
+  editor.unsavedChanges = 0;
 }
 
 void editorSave() {
@@ -296,6 +300,7 @@ void editorSave() {
         close(fileDescriptor);
         free(buffer);
         editorSetStatusMessage("%d bytes written to disk", length);
+        editor.unsavedChanges = 0;
         return;
       }
     }
@@ -393,9 +398,10 @@ void editorDrawRows(struct abuf *ab) {
 
 void editorDrawStatusBar(struct abuf *ab) {
   char status[80], rightStatus[80];
-  int length = snprintf(status, sizeof(status), "\"%.20s\" - %d lines",
+  int length = snprintf(status, sizeof(status), "\"%.20s\" - %d lines %s",
                         editor.filename ? editor.filename : "[No name]",
-                        editor.numberOfRows);
+                        editor.numberOfRows,
+                        editor.unsavedChanges ? "(modified)" : "");
   int rightLength = snprintf(rightStatus, sizeof(rightStatus), "%d/%d",
                              editor.cursorY + 1, editor.numberOfRows);
   if (length > editor.screencols) length = editor.screencols;
@@ -572,6 +578,7 @@ void initEditor() {
   editor.filename = NULL;
   editor.statusMessage[0] = '\0';
   editor.statusMessageTime = 0;
+  editor.unsavedChanges = 0;
 
   if (getWindowSize(&editor.screenrows, &editor.screencols) == -1) die("getWindowSize");
   editor.screenrows -= 2;
