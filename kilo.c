@@ -345,16 +345,19 @@ void editorMoveCursor(int key) {
   EditorRow *row = (editor.cursorY >= editor.numberOfRows) ? NULL : &editor.rows[editor.cursorY];
   switch (key) {
   case ARROW_DOWN:
+  case CTRL_KEY('n'):
     if (editor.cursorY < editor.numberOfRows) {
       editor.cursorY++;
     }
     break;
   case ARROW_UP:
+  case CTRL_KEY('p'):
     if (editor.cursorY > 0) {
       editor.cursorY--;
     }
     break;
   case ARROW_RIGHT:
+  case CTRL_KEY('f'):
     if (row && editor.cursorX < row->size) {
     editor.cursorX++;
     } else if (row && editor.cursorX == row->size) {
@@ -363,6 +366,7 @@ void editorMoveCursor(int key) {
     }
     break;
   case ARROW_LEFT:
+  case CTRL_KEY('b'):
     if (editor.cursorX > 0) {
       editor.cursorX--;
     } else if (editor.cursorY > 0) {
@@ -389,15 +393,21 @@ void editorProcessKeypress() {
     exit(0);
     break;
   case HOME_KEY:
+  case CTRL_KEY('a'):
     editor.cursorX = 0;
     break;
   case END_KEY:
-    editor.cursorX = editor.screencols - 1;
+  case CTRL_KEY('e'):
+    if (editor.cursorY < editor.numberOfRows) {
+      editor.cursorX = editor.rows[editor.cursorY].size;
+    }
     break;
   case PAGE_UP:
   case PAGE_DOWN:
+  case CTRL_KEY('u'):
+  case CTRL_KEY('d'):
     {
-      if (c == PAGE_UP) {
+      if (c == PAGE_UP || c == CTRL_KEY('u')) {
         editor.cursorY = editor.rowOffset;
       } else {
         editor.cursorY = editor.rowOffset + editor.screenrows - 1;
@@ -407,7 +417,7 @@ void editorProcessKeypress() {
       }
       int times = editor.screenrows;
       while (times--) {
-        editorMoveCursor(c = PAGE_UP ? ARROW_UP : ARROW_DOWN);
+        editorMoveCursor((c == PAGE_UP || c == CTRL_KEY('u')) ? ARROW_UP : ARROW_DOWN);
       }
     }
     break;
@@ -415,6 +425,10 @@ void editorProcessKeypress() {
   case ARROW_UP:
   case ARROW_RIGHT:
   case ARROW_LEFT:
+  case CTRL_KEY('n'):
+  case CTRL_KEY('p'):
+  case CTRL_KEY('f'):
+  case CTRL_KEY('b'):
     editorMoveCursor(c);
     break;
   }
