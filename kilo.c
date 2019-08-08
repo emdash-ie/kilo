@@ -182,6 +182,9 @@ int editorCursorToRender(EditorRow *row, int cursorX) {
   return renderX;
 }
 
+/**
+ * Update the rendered characters for a row.
+ */
 void editorUpdateRow(EditorRow *row) {
   int tabs = 0;
   for (int j = 0; j < row->size; j++) {
@@ -216,6 +219,25 @@ void editorAppendRow(char *s, size_t length) {
   editor.rows[new].renderChars = NULL;
   editorUpdateRow(&editor.rows[new]);
   editor.numberOfRows++;
+}
+
+void editorRowInsertChar(EditorRow *row, int at, int c) {
+  if (at < 0 || at > row->size) at = row->size;
+  row->chars = realloc(row->chars, row->size + 2);
+  memmove(&row->chars[at + 1], &row->chars[at], row->size - at + 1);
+  row->size++;
+  row->chars[at] = c;
+  editorUpdateRow(row);
+}
+
+/*** editor operations ***/
+
+void editorInsertChar(int c) {
+  if (editor.cursorY == editor.numberOfRows) {
+    editorAppendRow("", 0);
+  }
+  editorRowInsertChar(&editor.rows[editor.cursorY], editor.cursorX, c);
+  editor.cursorX++;
 }
 
 /*** file i/o ***/
@@ -476,6 +498,8 @@ void editorProcessKeypress() {
   case CTRL_KEY('b'):
     editorMoveCursor(c);
     break;
+  default:
+    editorInsertChar(c);
   }
 }
 
