@@ -15,6 +15,7 @@
 #include <sys/types.h>
 #include <time.h>
 #include <stdarg.h>
+#include <fcntl.h>
 
 /*** defines ***/
 
@@ -23,6 +24,7 @@
 #define tabSize 4
 
 enum EditorKey {
+  BACKSPACE = 127,
   ARROW_LEFT = 1000,
   ARROW_RIGHT,
   ARROW_DOWN,
@@ -61,6 +63,10 @@ typedef struct EditorConfig {
 } EditorConfig;
 
 EditorConfig editor;
+
+/*** prototypes ***/
+
+void editorSetStatusMessage(const char *format, ...);
 
 /*** terminal ***/
 
@@ -242,6 +248,24 @@ void editorInsertChar(int c) {
 
 /*** file i/o ***/
 
+char *editorRowsToString(int *bufferLength) {
+  int totalLength = 0;
+  for (int j = 0; j < editor.numberOfRows; j++) {
+    totalLength += editor.rows[j].size + 1;
+  }
+  *bufferLength = totalLength;
+
+  char *buffer = malloc(totalLength);
+  char *p = buffer;
+  for (int j = 0; j < editor.numberOfRows; j++) {
+    memcpy(p, editor.rows[j].chars, editor.rows[j].size);
+    p += editor.rows[j].size;
+    *p = '\n';
+    p++;
+  }
+  return buffer;
+}
+
 void editorOpen(char *filename) {
   free(editor.filename);
   editor.filename = strdup(filename);
@@ -259,6 +283,26 @@ void editorOpen(char *filename) {
   }
   free(line);
   fclose(fp);
+}
+
+void editorSave() {
+  if (editor.filename == NULL) return;
+  int length;
+  char *buffer = editorRowsToString(&length);
+  int fileDescriptor = open(editor.filename, O_RDWR | O_CREAT, 0644);
+  if (fileDescriptor != -1) {
+    if (ftruncate(fileDescriptor, length) != -1) {
+      if (write(fileDescriptor, buffer, length) == length) {
+        close(fileDescriptor);
+        free(buffer);
+        editorSetStatusMessage("%d bytes written to disk", length);
+        return;
+      }
+    }
+    close(fileDescriptor);
+  }
+  free(buffer);
+  editorSetStatusMessage("Can't save! I/O error: %s", strerror(errno));
 }
 
 /*** append buffer ***/
@@ -454,10 +498,15 @@ void editorProcessKeypress() {
   int c = editorReadKey();
 
   switch (c) {
+  case '\r':
+    break;
   case CTRL_KEY('q'):
     write(STDOUT_FILENO, "\x1b[2J", 4);
     write(STDOUT_FILENO, "\x1b[H", 3);
     exit(0);
+    break;
+  case CTRL_KEY('s'):
+    editorSave();
     break;
   case HOME_KEY:
   case CTRL_KEY('a'):
@@ -468,6 +517,10 @@ void editorProcessKeypress() {
     if (editor.cursorY < editor.numberOfRows) {
       editor.cursorX = editor.rows[editor.cursorY].size;
     }
+    break;
+  case BACKSPACE:
+  case CTRL_KEY('h'):
+  case DELETE_KEY:
     break;
   case PAGE_UP:
   case PAGE_DOWN:
@@ -497,6 +550,9 @@ void editorProcessKeypress() {
   case CTRL_KEY('f'):
   case CTRL_KEY('b'):
     editorMoveCursor(c);
+    break;
+  case '\x1b':
+  case CTRL_KEY('l'):
     break;
   default:
     editorInsertChar(c);
@@ -528,7 +584,7 @@ int main(int argc, char *argv[]) {
     editorOpen(argv[1]);
   }
 
-  editorSetStatusMessage("Ctrl-q to quit");
+  editorSetStatusMessage("Ctrl-q to quit, Ctrl-s to save");
 
   while (1) {
     editorRefreshScreen();
