@@ -229,12 +229,44 @@ void editorAppendRow(char *s, size_t length) {
   editor.unsavedChanges++;
 }
 
+void editorFreeRow(EditorRow *row) {
+  free(row->renderChars);
+  free(row->chars);
+}
+
+void editorDeleteRow(int at) {
+  if (at < 0 || at >= editor.numberOfRows) {
+    return;
+  }
+  editorFreeRow(&editor.rows[at]);
+  memmove(&editor.rows[at], &editor.rows[at + 1], sizeof(EditorRow) * (editor.numberOfRows - at - 1));
+  editor.numberOfRows--;
+  editor.unsavedChanges++;
+}
+
 void editorRowInsertChar(EditorRow *row, int at, int c) {
   if (at < 0 || at > row->size) at = row->size;
   row->chars = realloc(row->chars, row->size + 2);
   memmove(&row->chars[at + 1], &row->chars[at], row->size - at + 1);
   row->size++;
   row->chars[at] = c;
+  editorUpdateRow(row);
+  editor.unsavedChanges++;
+}
+
+void editorRowAppendString(EditorRow *row, char *s, size_t length) {
+  row->chars = realloc(row->chars, row->size + length + 1);
+  memcpy(&row->chars[row->size], s, length);
+  row->size += length;
+  row->chars[row->size] = '\0';
+  editorUpdateRow(row);
+  editor.unsavedChanges++;
+}
+
+void editorRowDeleteChar(EditorRow *row, int at) {
+  if (at < 0 || at >= row->size) return;
+  memmove(&row->chars[at], &row->chars[at + 1], row->size - at);
+  row->size--;
   editorUpdateRow(row);
   editor.unsavedChanges++;
 }
@@ -247,6 +279,23 @@ void editorInsertChar(int c) {
   }
   editorRowInsertChar(&editor.rows[editor.cursorY], editor.cursorX, c);
   editor.cursorX++;
+}
+
+void editorDeleteChar() {
+  if (editor.cursorY == editor.numberOfRows) return;
+  if (editor.cursorY == 0 && editor.cursorX == 0) return;
+  EditorRow *row = &editor.rows[editor.cursorY];
+  if (editor.cursorX > 0) {
+    editorRowDeleteChar(row, editor.cursorX - 1);
+    editor.cursorX--;
+  } else {
+    editor.cursorX = editor.rows[editor.cursorY - 1].size;
+    editorRowAppendString(&editor.rows[editor.cursorY - 1],
+                          editor.rows[editor.cursorY].chars,
+                          editor.rows[editor.cursorY].size);
+    editorDeleteRow(editor.cursorY);
+    editor.cursorY--;
+  }
 }
 
 /*** file i/o ***/
@@ -501,12 +550,18 @@ void editorMoveCursor(int key) {
 }
 
 void editorProcessKeypress() {
+  static int quitTimes = 1;
   int c = editorReadKey();
 
   switch (c) {
   case '\r':
     break;
   case CTRL_KEY('q'):
+    if (editor.unsavedChanges && quitTimes > 0) {
+      editorSetStatusMessage("There are unsaved changes. Press Ctrl-q again to quit.");
+      quitTimes = 0;
+      return;
+    }
     write(STDOUT_FILENO, "\x1b[2J", 4);
     write(STDOUT_FILENO, "\x1b[H", 3);
     exit(0);
@@ -526,7 +581,11 @@ void editorProcessKeypress() {
     break;
   case BACKSPACE:
   case CTRL_KEY('h'):
+    editorDeleteChar();
+    break;
   case DELETE_KEY:
+    editorMoveCursor(ARROW_RIGHT);
+    editorDeleteChar();
     break;
   case PAGE_UP:
   case PAGE_DOWN:
@@ -563,6 +622,7 @@ void editorProcessKeypress() {
   default:
     editorInsertChar(c);
   }
+  quitTimes = 1;
 }
 
 /*** init ***/
