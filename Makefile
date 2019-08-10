@@ -1,5 +1,4 @@
-kibi: kibi.c
-	$(CC) kibi.c -o kibi -Wall -Wextra -pedantic -std=c17
+CFLAGS = -Wall -Wextra -pedantic -std=c17
 
+kibi: kibi.c editorRow.o
 zipperBuffer: zipperBuffer.c
-	$(CC) zipperBuffer.c -o zipperBuffer -Wall -Wextra -pedantic -std=c17

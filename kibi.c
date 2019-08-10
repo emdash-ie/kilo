@@ -16,6 +16,7 @@
 #include <time.h>
 #include <stdarg.h>
 #include <fcntl.h>
+#include "editorRow.h"
 
 /*** defines ***/
 
@@ -37,15 +38,6 @@ enum EditorKey {
 };
 
 /*** data ***/
-
-typedef struct EditorRow EditorRow;
-
-struct EditorRow {
-  int size;
-  char *chars;
-  int renderSize;
-  char *renderChars;
-};
 
 typedef struct EditorConfig {
   int cursorX, cursorY;
@@ -177,44 +169,6 @@ int getWindowSize(int *rows, int *cols) {
 
 /*** row operations ***/
 
-int editorCursorToRender(EditorRow *row, int cursorX) {
-  int renderX = 0;
-  for (int j = 0; j < cursorX; j++) {
-    if (row->chars[j] == '\t') {
-      renderX += tabSize;
-    } else {
-      renderX += 1;
-    }
-  }
-  return renderX;
-}
-
-/**
- * Update the rendered characters for a row.
- */
-void editorUpdateRow(EditorRow *row) {
-  int tabs = 0;
-  for (int j = 0; j < row->size; j++) {
-    if (row->chars[j] == '\t') {
-      tabs++;
-    }
-  }
-  free(row->renderChars);
-  row->renderChars = malloc(row->size + tabs * (tabSize - 1) + 1);
-  int i = 0;
-  for (int j = 0; j < row->size; j++) {
-    if (row->chars[j] == '\t') {
-      for (int size = tabSize; size > 0; size--) {
-        row->renderChars[i++] = ' ';
-      }
-    } else {
-      row->renderChars[i++] = row->chars[j];
-    }
-  }
-  row->renderChars[i] = '\0';
-  row->renderSize = i;
-}
-
 void editorAppendRow(char *s, size_t length) {
   editor.rows = realloc(editor.rows, sizeof(EditorRow) * (editor.numberOfRows + 1));
   int new = editor.numberOfRows;
@@ -224,14 +178,9 @@ void editorAppendRow(char *s, size_t length) {
   editor.rows[new].chars[length] = '\0';
   editor.rows[new].renderSize = 0;
   editor.rows[new].renderChars = NULL;
-  editorUpdateRow(&editor.rows[new]);
+  editorUpdateRow(&editor.rows[new], tabSize);
   editor.numberOfRows++;
   editor.unsavedChanges++;
-}
-
-void editorFreeRow(EditorRow *row) {
-  free(row->renderChars);
-  free(row->chars);
 }
 
 void editorDeleteRow(int at) {
@@ -250,7 +199,7 @@ void editorRowInsertChar(EditorRow *row, int at, int c) {
   memmove(&row->chars[at + 1], &row->chars[at], row->size - at + 1);
   row->size++;
   row->chars[at] = c;
-  editorUpdateRow(row);
+  editorUpdateRow(row, tabSize);
   editor.unsavedChanges++;
 }
 
@@ -259,7 +208,7 @@ void editorRowAppendString(EditorRow *row, char *s, size_t length) {
   memcpy(&row->chars[row->size], s, length);
   row->size += length;
   row->chars[row->size] = '\0';
-  editorUpdateRow(row);
+  editorUpdateRow(row, tabSize);
   editor.unsavedChanges++;
 }
 
@@ -267,7 +216,7 @@ void editorRowDeleteChar(EditorRow *row, int at) {
   if (at < 0 || at >= row->size) return;
   memmove(&row->chars[at], &row->chars[at + 1], row->size - at);
   row->size--;
-  editorUpdateRow(row);
+  editorUpdateRow(row, tabSize);
   editor.unsavedChanges++;
 }
 
@@ -388,7 +337,7 @@ void abFree(struct abuf *ab) {
 void editorScroll() {
   editor.cursorRenderX = 0;
   if (editor.cursorY < editor.numberOfRows) {
-    editor.cursorRenderX = editorCursorToRender(&editor.rows[editor.cursorY], editor.cursorX);
+    editor.cursorRenderX = editorCursorToRender(&editor.rows[editor.cursorY], editor.cursorX, tabSize);
   }
 
   if (editor.cursorY < editor.rowOffset) {

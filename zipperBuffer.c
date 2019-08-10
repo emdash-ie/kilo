@@ -1,6 +1,10 @@
+#ifndef ZIPPER_BUFFER
+#define ZIPPER_BUFFER
+
 #include <stdlib.h>
 #include <stdbool.h>
 #include <stdio.h>
+#include "editorRow.c"
 
 typedef struct Row Row;
 
@@ -145,3 +149,5 @@ int main() {
     }
   }
 }
+
+#endif
