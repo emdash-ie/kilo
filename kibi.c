@@ -247,29 +247,37 @@ void editorRowDeleteChar(EditorRow *row, int at) {
   editor.unsavedChanges++;
 }
 
+EditorRow *editorCurrentRow() {
+  return editor.buffer->forwards ? editor.buffer->forwards->head : NULL;
+}
+
+EditorRow *editorPreviousRow() {
+  return editor.buffer->backwards ? editor.buffer->backwards->head : NULL;
+}
+
 /*** editor operations ***/
 
 void editorInsertChar(int c) {
-  if (editor.buffer->forwards == NULL) {
+  EditorRow *row = editorCurrentRow();
+  if (row == NULL) {
     editorInsertRow("", 0);
   }
-  editorRowInsertChar(editor.buffer->forwards->head, editor.cursorX, c);
+  editorRowInsertChar(row, editor.cursorX, c);
   editor.cursorX++;
 }
 
 void editorDeleteChar() {
-  if (editor.cursorY == editor.numberOfRows) return;
-  if (editor.cursorY == 0 && editor.cursorX == 0) return;
-  EditorRow *row = editor.buffer->forwards->head;
+  EditorRow *current = editorCurrentRow();
+  if (current == NULL) return;
+  EditorRow *previous = editorPreviousRow();
+  if (previous == NULL && editor.cursorX == 0) return;
   if (editor.cursorX > 0) {
-    editorRowDeleteChar(row, editor.cursorX - 1);
+    editorRowDeleteChar(current, editor.cursorX - 1);
     editor.cursorX--;
   } else {
-    editor.cursorX = editor.buffer->backwards->head->size;
-    editorRowAppendString(editor.buffer->backwards->head,
-                          editor.buffer->forwards->head->chars,
-                          editor.buffer->forwards->head->size);
-    editorDeleteRow(editor.cursorY);
+    editor.cursorX = previous->size;
+    editorRowAppendString(previous, current->chars, current->size);
+    editorDeleteCurrentRow();
     editor.cursorY--;
   }
 }
@@ -375,9 +383,9 @@ void abFree(struct abuf *ab) {
 
 void editorScroll() {
   editor.cursorRenderX = 0;
-  if (editor.cursorY < editor.numberOfRows) {
-    editor.cursorRenderX = editorCursorToRender(editor.buffer->forwards->head,
-                                                editor.cursorX, tabSize);
+  EditorRow *current = editorCurrentRow();
+  if (current != NULL) {
+    editor.cursorRenderX = editorCursorToRender(current, editor.cursorX, tabSize);
   }
   if (editor.cursorRenderX < editor.columnOffset) {
     editor.columnOffset = editor.cursorRenderX;
@@ -506,7 +514,7 @@ void editorRefreshScreen() {
   editorDrawMessageBar(&ab);
   char buf[32];
   snprintf(buf, sizeof(buf), "\x1b[%d;%dH",
-           (editor.cursorY - editor.rowOffset) + 1,
+           editor.cursorY + 1,
            (editor.cursorRenderX - editor.columnOffset) + 1);
   abAppend(&ab, buf, strlen(buf));
   abAppend(&ab, "\x1b[?25h", 6);
@@ -526,9 +534,7 @@ void editorSetStatusMessage(const char *format, ...) {
 /*** input ***/
 
 void editorMoveCursor(int key) {
-  EditorRow *row = (editor.buffer->forwards == NULL)
-    ? NULL
-    : editor.buffer->forwards->head;
+  EditorRow *row = editorCurrentRow();
   switch (key) {
   case ARROW_DOWN:
   case CTRL_KEY('n'):
@@ -547,7 +553,7 @@ void editorMoveCursor(int key) {
   case ARROW_RIGHT:
   case CTRL_KEY('f'):
     if (row && editor.cursorX < row->size) {
-    editor.cursorX++;
+      editor.cursorX++;
     } else if (row && editor.cursorX == row->size) {
       editor.cursorY++;
       zipperForwardRow(editor.buffer, NULL);
@@ -558,15 +564,17 @@ void editorMoveCursor(int key) {
   case CTRL_KEY('b'):
     if (editor.cursorX > 0) {
       editor.cursorX--;
-    } else if (editor.cursorY > 0) {
-      editor.cursorY--;
+    } else if (editorPreviousRow() != NULL) {
+      if (editor.cursorY > 0) {
+        editor.cursorY--;
+      }
       zipperBackwardRow(editor.buffer, NULL);
       editor.cursorX = editor.buffer->forwards->head->size;
     }
     break;
   }
 
-  row = editor.buffer->forwards ? NULL : editor.buffer->forwards->head;
+  row = editorCurrentRow();
   int rowLength = row ? row->size : 0;
   if (editor.cursorX > rowLength) {
     editor.cursorX = rowLength;
@@ -599,10 +607,13 @@ void editorProcessKeypress() {
     break;
   case END_KEY:
   case CTRL_KEY('e'):
-    if (editor.cursorY < editor.numberOfRows) {
-      editor.cursorX = editor.buffer->forwards->head->size;
+    {
+      EditorRow *current = editorCurrentRow();
+      if (current != NULL) {
+        editor.cursorX = current->size;
+      }
+      break;
     }
-    break;
   case BACKSPACE:
   case CTRL_KEY('h'):
     editorDeleteChar();
