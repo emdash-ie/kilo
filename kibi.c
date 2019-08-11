@@ -284,8 +284,17 @@ void editorDeleteChar() {
 }
 
 void editorForwardLine() {
-  zipperForwardRow(editor.buffer, NULL);
-  editor.cursorRow++;
+  if (editorCurrentRow() != NULL) {
+    zipperForwardRow(editor.buffer, NULL);
+    editor.cursorRow++;
+  }
+}
+
+void editorBackwardLine() {
+  if (editorPreviousRow() != NULL) {
+    zipperBackwardRow(editor.buffer, NULL);
+    editor.cursorRow--;
+  }
 }
 
 void editorJumpToEnd() {
@@ -459,7 +468,7 @@ void editorDrawStatusBar(struct abuf *ab) {
                         editor.numberOfRows,
                         editor.unsavedChanges ? "(modified)" : "");
   int rightLength = snprintf(rightStatus, sizeof(rightStatus), "%d/%d",
-                             editor.cursorY + 1, editor.numberOfRows);
+                             editor.cursorRow + 1, editor.numberOfRows);
   if (length > editor.screencols) length = editor.screencols;
   abAppend(ab, status, length);
   while (length < editor.screencols) {
@@ -554,14 +563,14 @@ void editorMoveCursor(int key) {
     if (editor.cursorY < editor.screenrows - 1) {
       editor.cursorY++;
     }
-    zipperForwardRow(editor.buffer, NULL);
+    editorForwardLine();
     break;
   case ARROW_UP:
   case CTRL_KEY('p'):
     if (editor.cursorY > 0) {
       editor.cursorY--;
     }
-    zipperBackwardRow(editor.buffer, NULL);
+    editorBackwardLine();
     break;
   case ARROW_RIGHT:
   case CTRL_KEY('f'):
@@ -569,7 +578,7 @@ void editorMoveCursor(int key) {
       editor.cursorX++;
     } else if (row && editor.cursorX == row->size) {
       editor.cursorY++;
-      zipperForwardRow(editor.buffer, NULL);
+      editorForwardLine();
       editor.cursorX = 0;
     }
     break;
@@ -581,7 +590,7 @@ void editorMoveCursor(int key) {
       if (editor.cursorY > 0) {
         editor.cursorY--;
       }
-      zipperBackwardRow(editor.buffer, NULL);
+      editorBackwardLine();
       editor.cursorX = editor.buffer->forwards->head->size;
     }
     break;
