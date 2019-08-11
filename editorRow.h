@@ -1,6 +1,8 @@
 #ifndef EDITOR_ROW
 #define EDITOR_ROW
 
+#include <stdlib.h>
+
 typedef struct EditorRow EditorRow;
 
 struct EditorRow {
@@ -9,6 +11,8 @@ struct EditorRow {
   int renderSize;
   char *renderChars;
 };
+
+EditorRow *newRow(char *s, size_t length, int tabSize);
 
 int editorCursorToRender(EditorRow *row, int cursorX, int tabSize);
 

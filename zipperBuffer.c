@@ -1,36 +1,12 @@
-#ifndef ZIPPER_BUFFER
-#define ZIPPER_BUFFER
-
 #include <stdlib.h>
 #include <stdbool.h>
 #include <stdio.h>
-#include "editorRow.c"
-
-typedef struct Row Row;
-
-struct Row {
-  char *characters;
-  int length;
-};
-
-Row *newRow(char *characters, int length) {
-  Row *row = malloc(sizeof(Row));
-  row->characters = characters;
-  row->length = length;
-  return row;
-}
-
-typedef struct RowList RowList;
-
-struct RowList {
-  Row *head;
-  RowList *tail;
-  int number;
-};
+#include "editorRow.h"
+#include "zipperBuffer.h"
 
 int rowListId = 0;
 
-RowList *newRowList(Row *head, RowList *tail) {
+RowList *newRowList(EditorRow *head, RowList *tail) {
   RowList *rowList = malloc(sizeof(RowList));
   rowList->head = head;
   rowList->tail = tail;
@@ -51,19 +27,27 @@ bool rowListNewer(RowList *x, RowList *y) {
   }
 }
 
-void updateRowList(RowList *toUpdate, Row *newHead, RowList *newTail) {
+void updateRowList(RowList *toUpdate, EditorRow *newHead, RowList *newTail) {
   if (toUpdate == NULL) return;
   toUpdate->head = newHead;
   toUpdate->tail = newTail;
   toUpdate->number = rowListId++;
 }
 
-typedef struct ZipperBuffer ZipperBuffer;
-
-struct ZipperBuffer {
-  RowList *forwards;
-  RowList *backwards;
-};
+/**
+ * Reverses a RowList by mutating it. Returns the new head.
+ */
+RowList *rowListReverse(RowList *rows) {
+  RowList *last = NULL;
+  RowList *next = NULL;
+  while (rows != NULL) {
+    next = rows->tail;
+    rows->tail = last;
+    last = rows;
+    rows = next;
+  }
+  return last;
+}
 
 void zipperForwardRow(ZipperBuffer *buffer, RowList *keepBefore) {
   if (buffer->forwards == NULL) return;
@@ -79,6 +63,12 @@ void zipperForwardRow(ZipperBuffer *buffer, RowList *keepBefore) {
   }
   buffer->forwards = newForwards;
   buffer->backwards = newBackwards;
+}
+
+void zipperForwardN(ZipperBuffer *buffer, RowList *keepBefore, int n) {
+  for (;n > 0; n--) {
+    zipperForwardRow(buffer, keepBefore);
+  }
 }
 
 void zipperBackwardRow(ZipperBuffer *buffer, RowList *keepBefore) {
@@ -97,10 +87,22 @@ void zipperBackwardRow(ZipperBuffer *buffer, RowList *keepBefore) {
   buffer->backwards = newBackwards;
 }
 
+void zipperBackwardN(ZipperBuffer *buffer, RowList *keepBefore, int n) {
+  for (;n > 0; n--) {
+    zipperBackwardRow(buffer, keepBefore);
+  }
+}
+
+void zipperInsertRow(ZipperBuffer *buffer, EditorRow *new) {
+  RowList *oldForwards = buffer->forwards;
+  RowList *newForwards = newRowList(new, oldForwards);
+  buffer->forwards = newForwards;
+}
+
 void printRowList(RowList *list) {
   int i = 1;
   while (list != NULL) {
-    printf("%d: %s\n", i, list->head->characters);
+    printf("%d: %s\n", i, list->head->chars);
     list = list->tail;
     i++;
   }
@@ -114,27 +116,27 @@ void printZipperBuffer(ZipperBuffer *buffer) {
 }
 
 ZipperBuffer *exampleBuffer() {
-  Row *first = newRow("That's great, it starts with an earthquake.", 0);
-  Row *second = newRow("Birds and snakes, an aeroplane.", 0);
-  Row *third = newRow("Lenny Bruce is not afraid.", 0);
-  Row *fourth = newRow("Eye of a hurricane, listen to yourself churn,", 0);
-  Row *fifth = newRow("World serves its own needs, dummy serve your own needs", 0);
-  Row *sixth = newRow("Feed it off an aux speak, grunt no strength", 0);
-  Row *seventh = newRow("The ladder starts to clatter with fear of fight, down height", 0);
-  RowList *forwards = newRowList(first,
-    newRowList(second,
-    newRowList(third,
-    newRowList(fourth,
-    newRowList(fifth,
-    newRowList(sixth,
-    newRowList(seventh, NULL)))))));
+  /* EditorRow *first = newRow("That's great, it starts with an earthquake.", 0); */
+  /* EditorRow *second = newRow("Birds and snakes, an aeroplane.", 0); */
+  /* EditorRow *third = newRow("Lenny Bruce is not afraid.", 0); */
+  /* EditorRow *fourth = newRow("Eye of a hurricane, listen to yourself churn,", 0); */
+  /* EditorRow *fifth = newRow("World serves its own needs, dummy serve your own needs", 0); */
+  /* EditorRow *sixth = newRow("Feed it off an aux speak, grunt no strength", 0); */
+  /* EditorRow *seventh = newRow("The ladder starts to clatter with fear of fight, down height", 0); */
+  /* RowList *forwards = newRowList(first, */
+  /*   newRowList(second, */
+  /*   newRowList(third, */
+  /*   newRowList(fourth, */
+  /*   newRowList(fifth, */
+  /*   newRowList(sixth, */
+  /*   newRowList(seventh, NULL))))))); */
   ZipperBuffer *buffer = malloc(sizeof(ZipperBuffer));
-  buffer->forwards = forwards;
+  buffer->forwards = NULL;
   buffer->backwards = NULL;
   return buffer;
 }
 
-int main() {
+int testZipperBuffer() {
   ZipperBuffer *buffer = exampleBuffer();
   int i = 0;
   printf("Starting off:\n");
@@ -149,5 +151,3 @@ int main() {
     }
   }
 }
-
-#endif

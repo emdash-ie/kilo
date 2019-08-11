@@ -1,5 +1,18 @@
 #include <stdlib.h>
+#include <string.h>
 #include "editorRow.h"
+
+EditorRow *newRow(char *s, size_t length, int tabSize) {
+  EditorRow *row = malloc(sizeof(*row));
+  row->size = length;
+  row->chars = malloc(length + 1);
+  memcpy(row->chars, s, length);
+  row->chars[length] = '\0';
+  row->renderSize = 0;
+  row->renderChars = NULL;
+  editorUpdateRow(row, tabSize);
+  return row;
+}
 
 int editorCursorToRender(EditorRow *row, int cursorX, int tabSize) {
   int renderX = 0;

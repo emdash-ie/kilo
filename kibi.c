@@ -17,6 +17,7 @@
 #include <stdarg.h>
 #include <fcntl.h>
 #include "editorRow.h"
+#include "zipperBuffer.h"
 
 /*** defines ***/
 
@@ -47,7 +48,7 @@ typedef struct EditorConfig {
   int screenrows;
   int screencols;
   int numberOfRows;
-  EditorRow *rows;
+  ZipperBuffer *buffer;
   char *filename;
   char statusMessage[80];
   time_t statusMessageTime;
@@ -169,17 +170,29 @@ int getWindowSize(int *rows, int *cols) {
 
 /*** row operations ***/
 
-void editorAppendRow(char *s, size_t length) {
-  editor.rows = realloc(editor.rows, sizeof(EditorRow) * (editor.numberOfRows + 1));
-  int new = editor.numberOfRows;
-  editor.rows[new].size = length;
-  editor.rows[new].chars = malloc(length + 1);
-  memcpy(editor.rows[new].chars, s, length);
-  editor.rows[new].chars[length] = '\0';
-  editor.rows[new].renderSize = 0;
-  editor.rows[new].renderChars = NULL;
-  editorUpdateRow(&editor.rows[new], tabSize);
+void editorInsertRow(char *s, size_t length) {
+  zipperInsertRow(editor.buffer, newRow(s, length, tabSize));
   editor.numberOfRows++;
+  editor.unsavedChanges++;
+}
+
+void editorAppendRow(char *s, size_t length) {
+  int i = 0;
+  while (editor.buffer->forwards != NULL) {
+    zipperForwardRow(editor.buffer, NULL);
+    i++;
+  }
+  editorInsertRow(s, length);
+  while (i > 0) {
+    zipperBackwardRow(editor.buffer, NULL);
+    i--;
+  }
+}
+
+void editorDeleteCurrentRow() {
+  if (editor.buffer->forwards == NULL) return;
+  editor.buffer->forwards = editor.buffer->forwards->tail;
+  editor.numberOfRows--;
   editor.unsavedChanges++;
 }
 
@@ -187,10 +200,24 @@ void editorDeleteRow(int at) {
   if (at < 0 || at >= editor.numberOfRows) {
     return;
   }
-  editorFreeRow(&editor.rows[at]);
-  memmove(&editor.rows[at], &editor.rows[at + 1], sizeof(EditorRow) * (editor.numberOfRows - at - 1));
-  editor.numberOfRows--;
-  editor.unsavedChanges++;
+  int moves = 0;
+  while (editor.buffer->backwards != NULL) {
+    zipperBackwardRow(editor.buffer, NULL);
+    moves--;
+  }
+  moves += at;
+  while (at > 0) {
+    zipperForwardRow(editor.buffer, NULL);
+    at--;
+  }
+  editorDeleteCurrentRow();
+  while (moves < -1) {
+    zipperForwardRow(editor.buffer, NULL);
+    moves++;
+  }
+  while (moves > 0) {
+    zipperBackwardRow(editor.buffer, NULL);
+  }
 }
 
 void editorRowInsertChar(EditorRow *row, int at, int c) {
@@ -223,25 +250,25 @@ void editorRowDeleteChar(EditorRow *row, int at) {
 /*** editor operations ***/
 
 void editorInsertChar(int c) {
-  if (editor.cursorY == editor.numberOfRows) {
-    editorAppendRow("", 0);
+  if (editor.buffer->forwards == NULL) {
+    editorInsertRow("", 0);
   }
-  editorRowInsertChar(&editor.rows[editor.cursorY], editor.cursorX, c);
+  editorRowInsertChar(editor.buffer->forwards->head, editor.cursorX, c);
   editor.cursorX++;
 }
 
 void editorDeleteChar() {
   if (editor.cursorY == editor.numberOfRows) return;
   if (editor.cursorY == 0 && editor.cursorX == 0) return;
-  EditorRow *row = &editor.rows[editor.cursorY];
+  EditorRow *row = editor.buffer->forwards->head;
   if (editor.cursorX > 0) {
     editorRowDeleteChar(row, editor.cursorX - 1);
     editor.cursorX--;
   } else {
-    editor.cursorX = editor.rows[editor.cursorY - 1].size;
-    editorRowAppendString(&editor.rows[editor.cursorY - 1],
-                          editor.rows[editor.cursorY].chars,
-                          editor.rows[editor.cursorY].size);
+    editor.cursorX = editor.buffer->backwards->head->size;
+    editorRowAppendString(editor.buffer->backwards->head,
+                          editor.buffer->forwards->head->chars,
+                          editor.buffer->forwards->head->size);
     editorDeleteRow(editor.cursorY);
     editor.cursorY--;
   }
@@ -250,19 +277,30 @@ void editorDeleteChar() {
 /*** file i/o ***/
 
 char *editorRowsToString(int *bufferLength) {
+  int rowsToEnd = 0;
+  while (editor.buffer->forwards != NULL) {
+    zipperForwardRow(editor.buffer, NULL);
+    rowsToEnd++;
+  }
   int totalLength = 0;
-  for (int j = 0; j < editor.numberOfRows; j++) {
-    totalLength += editor.rows[j].size + 1;
+  while (editor.buffer->backwards != NULL) {
+    totalLength += editor.buffer->backwards->head->size + 1;
+    zipperBackwardRow(editor.buffer, NULL);
   }
   *bufferLength = totalLength;
 
   char *buffer = malloc(totalLength);
   char *p = buffer;
-  for (int j = 0; j < editor.numberOfRows; j++) {
-    memcpy(p, editor.rows[j].chars, editor.rows[j].size);
-    p += editor.rows[j].size;
+  while (editor.buffer->forwards != NULL) {
+    memcpy(p, editor.buffer->forwards->head->chars,
+           editor.buffer->forwards->head->size);
+    p += editor.buffer->forwards->head->size;
     *p = '\n';
     p++;
+  }
+  while (rowsToEnd > 0) {
+    zipperBackwardRow(editor.buffer, NULL);
+    rowsToEnd--;
   }
   return buffer;
 }
@@ -280,8 +318,9 @@ void editorOpen(char *filename) {
            (line[lineLength - 1] == '\n' || line[lineLength - 1] == '\r')) {
       lineLength--;
     }
-    editorAppendRow(line, lineLength);
+    editorInsertRow(line, lineLength);
   }
+  editor.buffer->forwards = rowListReverse(editor.buffer->forwards);
   free(line);
   fclose(fp);
   editor.unsavedChanges = 0;
@@ -337,14 +376,8 @@ void abFree(struct abuf *ab) {
 void editorScroll() {
   editor.cursorRenderX = 0;
   if (editor.cursorY < editor.numberOfRows) {
-    editor.cursorRenderX = editorCursorToRender(&editor.rows[editor.cursorY], editor.cursorX, tabSize);
-  }
-
-  if (editor.cursorY < editor.rowOffset) {
-    editor.rowOffset = editor.cursorY;
-  }
-  if (editor.cursorY >= editor.rowOffset + editor.screenrows) {
-    editor.rowOffset = editor.cursorY - editor.screenrows + 1;
+    editor.cursorRenderX = editorCursorToRender(editor.buffer->forwards->head,
+                                                editor.cursorX, tabSize);
   }
   if (editor.cursorRenderX < editor.columnOffset) {
     editor.columnOffset = editor.cursorRenderX;
@@ -354,43 +387,47 @@ void editorScroll() {
   }
 }
 
-void editorDrawRows(struct abuf *ab) {
-  for (int y = 0; y < editor.screenrows; y++) {
-    int fileRow = y + editor.rowOffset;
-    if (fileRow >= editor.numberOfRows) {
-      if (editor.numberOfRows == 0 && y == editor.screenrows / 3) {
-        char welcome[80];
-        int welcomeLength = snprintf(
-                                     welcome,
-                                     sizeof(welcome),
-                                     "Kibi editor - version %s",
-                                     KIBI_VERSION
-                                     );
-        if (welcomeLength > editor.screencols) {
-          welcomeLength = editor.screencols;
-        }
-        int padding = (editor.screencols - welcomeLength) / 2;
-        if (padding) {
-          abAppend(ab, "~", 1);
-          padding--;
-        }
-        while (padding--) abAppend(ab, " ", 1);
-        abAppend(ab, welcome, welcomeLength);
-      } else {
-        abAppend(ab, "~", 1);
-      }
-    } else {
-      int length = editor.rows[fileRow].renderSize - editor.columnOffset;
-      if (length < 0) {
-        length = 0;
-      }
-      if (length > editor.screencols) {
-        length = editor.screencols;
-      }
-      abAppend(ab, &editor.rows[fileRow].renderChars[editor.columnOffset], length);
-    }
-    abAppend(ab, "\x1b[K", 3);
-    abAppend(ab, "\r\n", 2);
+void editorDrawLine(struct abuf *ab, char *s, int length) {
+  abAppend(ab, s, length);
+  abAppend(ab, "\x1b[K", 3);
+  abAppend(ab, "\r\n", 2);
+}
+
+void editorDrawRow(struct abuf *ab, EditorRow *row) {
+  int length = row->renderSize - editor.columnOffset;
+  if (length < 0) length = 0;
+  if (length > editor.screencols) length = editor.screencols;
+  editorDrawLine(ab, &row->renderChars[editor.columnOffset], length);
+}
+
+void editorDrawEmpties(struct abuf *ab, int numberOfLines) {
+  editorDrawLine(ab, "~", 1);
+  if (numberOfLines > 1) {
+    editorDrawEmpties(ab, numberOfLines - 1);
+  }
+}
+
+void editorDrawBackwards(struct abuf *ab, RowList* rows, int numberOfLines) {
+  if (numberOfLines < 1) return;
+  if (rows == NULL) {
+    editorDrawEmpties(ab, numberOfLines);
+    return;
+  }
+  if (numberOfLines > 1) {
+    editorDrawBackwards(ab, rows->tail, numberOfLines - 1);
+  }
+  editorDrawRow(ab, rows->head);
+}
+
+void editorDrawForwards(struct abuf *ab, RowList* rows, int numberOfLines) {
+  if (numberOfLines < 1) return;
+  if (rows == NULL) {
+    editorDrawEmpties(ab, numberOfLines);
+    return;
+  }
+  editorDrawRow(ab, rows->head);
+  if (numberOfLines > 1) {
+    editorDrawForwards(ab, rows->tail, numberOfLines - 1);
   }
 }
 
@@ -415,6 +452,38 @@ void editorDrawStatusBar(struct abuf *ab) {
   }
   abAppend(ab, "\r\n", 2);
 }
+
+void editorDrawWelcome(struct abuf *ab) {
+  editorDrawEmpties(ab, editor.screenrows / 3 - 1);
+  char welcome[80];
+  int welcomeLength = snprintf(
+                               welcome,
+                               sizeof(welcome),
+                               "Kibi editor - version %s",
+                               KIBI_VERSION
+                               );
+  if (welcomeLength > editor.screencols) {
+    welcomeLength = editor.screencols;
+  }
+  int padding = (editor.screencols - welcomeLength) / 2;
+  if (padding) {
+    abAppend(ab, "~", 1);
+    padding--;
+  }
+  while (padding--) abAppend(ab, " ", 1);
+  abAppend(ab, welcome, welcomeLength);
+}
+
+void editorDrawRows(struct abuf *ab) {
+  if (editor.numberOfRows == 0) {
+    editorDrawWelcome(ab);
+  } else {
+    editorDrawBackwards(ab, editor.buffer->backwards, editor.cursorY);
+    int toDraw = editor.screenrows - editor.cursorY;
+    editorDrawForwards(ab, editor.buffer->forwards, toDraw);
+  }
+}
+
 
 void editorDrawMessageBar(struct abuf *ab) {
   abAppend(ab, "\x1b[K", 3);
@@ -457,19 +526,23 @@ void editorSetStatusMessage(const char *format, ...) {
 /*** input ***/
 
 void editorMoveCursor(int key) {
-  EditorRow *row = (editor.cursorY >= editor.numberOfRows) ? NULL : &editor.rows[editor.cursorY];
+  EditorRow *row = (editor.buffer->forwards == NULL)
+    ? NULL
+    : editor.buffer->forwards->head;
   switch (key) {
   case ARROW_DOWN:
   case CTRL_KEY('n'):
-    if (editor.cursorY < editor.numberOfRows) {
+    if (editor.cursorY < editor.screenrows - 1) {
       editor.cursorY++;
     }
+    zipperForwardRow(editor.buffer, NULL);
     break;
   case ARROW_UP:
   case CTRL_KEY('p'):
     if (editor.cursorY > 0) {
       editor.cursorY--;
     }
+    zipperBackwardRow(editor.buffer, NULL);
     break;
   case ARROW_RIGHT:
   case CTRL_KEY('f'):
@@ -477,6 +550,7 @@ void editorMoveCursor(int key) {
     editor.cursorX++;
     } else if (row && editor.cursorX == row->size) {
       editor.cursorY++;
+      zipperForwardRow(editor.buffer, NULL);
       editor.cursorX = 0;
     }
     break;
@@ -486,12 +560,13 @@ void editorMoveCursor(int key) {
       editor.cursorX--;
     } else if (editor.cursorY > 0) {
       editor.cursorY--;
-      editor.cursorX = editor.rows[editor.cursorY].size;
+      zipperBackwardRow(editor.buffer, NULL);
+      editor.cursorX = editor.buffer->forwards->head->size;
     }
     break;
   }
 
-  row = (editor.cursorY >= editor.numberOfRows) ? NULL : &editor.rows[editor.cursorY];
+  row = editor.buffer->forwards ? NULL : editor.buffer->forwards->head;
   int rowLength = row ? row->size : 0;
   if (editor.cursorX > rowLength) {
     editor.cursorX = rowLength;
@@ -525,7 +600,7 @@ void editorProcessKeypress() {
   case END_KEY:
   case CTRL_KEY('e'):
     if (editor.cursorY < editor.numberOfRows) {
-      editor.cursorX = editor.rows[editor.cursorY].size;
+      editor.cursorX = editor.buffer->forwards->head->size;
     }
     break;
   case BACKSPACE:
@@ -583,11 +658,13 @@ void initEditor() {
   editor.rowOffset = 0;
   editor.columnOffset = 0;
   editor.numberOfRows = 0;
-  editor.rows = NULL;
   editor.filename = NULL;
   editor.statusMessage[0] = '\0';
   editor.statusMessageTime = 0;
   editor.unsavedChanges = 0;
+  editor.buffer = malloc(sizeof(*editor.buffer));
+  editor.buffer->forwards = NULL;
+  editor.buffer->backwards = NULL;
 
   if (getWindowSize(&editor.screenrows, &editor.screencols) == -1) die("getWindowSize");
   editor.screenrows -= 2;
