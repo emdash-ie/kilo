@@ -42,6 +42,7 @@ enum EditorKey {
 
 typedef struct EditorConfig {
   int cursorX, cursorY;
+  int cursorRow;
   int cursorRenderX;
   int rowOffset;
   int columnOffset;
@@ -280,6 +281,18 @@ void editorDeleteChar() {
     editorDeleteCurrentRow();
     editor.cursorY--;
   }
+}
+
+void editorForwardLine() {
+  zipperForwardRow(editor.buffer, NULL);
+  editor.cursorRow++;
+}
+
+void editorJumpToEnd() {
+  while (editorCurrentRow() != NULL) {
+    editorForwardLine();
+  }
+  editor.cursorY = editor.screenrows - 1;
 }
 
 /*** file i/o ***/
@@ -640,6 +653,9 @@ void editorProcessKeypress() {
         editorMoveCursor((c == PAGE_UP || c == CTRL_KEY('u')) ? ARROW_UP : ARROW_DOWN);
       }
     }
+    break;
+  case CTRL_KEY('g'):
+    editorJumpToEnd();
     break;
   case ARROW_DOWN:
   case ARROW_UP:
