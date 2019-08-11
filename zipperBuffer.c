@@ -35,7 +35,7 @@ void updateRowList(RowList *toUpdate, EditorRow *newHead, RowList *newTail) {
 }
 
 /**
- * Reverses a RowList by mutating it. Returns the new head.
+ * Reverses a RowList in-place. Returns the new head.
  */
 RowList *rowListReverse(RowList *rows) {
   RowList *last = NULL;

@@ -61,6 +61,8 @@ EditorConfig editor;
 
 /*** prototypes ***/
 
+void editorForwardLine();
+
 void editorSetStatusMessage(const char *format, ...);
 
 /*** terminal ***/
@@ -177,6 +179,14 @@ void editorInsertRow(char *s, size_t length) {
   editor.unsavedChanges++;
 }
 
+void editorInsertRowAfter(char *s, size_t length) {
+  editorForwardLine();
+  editorInsertRow(s, length);
+  if (editor.cursorY < editor.screenrows - 1) {
+    editor.cursorY++;
+  }
+}
+
 void editorAppendRow(char *s, size_t length) {
   int i = 0;
   while (editor.buffer->forwards != NULL) {
@@ -221,31 +231,37 @@ void editorDeleteRow(int at) {
   }
 }
 
-void editorRowInsertChar(EditorRow *row, int at, int c) {
+EditorRow *editorRowInsertChar(EditorRow *row, int at, int c) {
   if (at < 0 || at > row->size) at = row->size;
-  row->chars = realloc(row->chars, row->size + 2);
-  memmove(&row->chars[at + 1], &row->chars[at], row->size - at + 1);
-  row->size++;
-  row->chars[at] = c;
-  editorUpdateRow(row, tabSize);
+  char *newChars = malloc(row->size + 2);
+  memcpy(newChars, row->chars, at);
+  memcpy(&newChars[at + 1], &row->chars[at], row->size - at);
+  newChars[at] = c;
+  newChars[row->size + 1] = '\0';
+  EditorRow *new = newRow(newChars, row->size + 1, tabSize);
   editor.unsavedChanges++;
+  return new;
 }
 
-void editorRowAppendString(EditorRow *row, char *s, size_t length) {
-  row->chars = realloc(row->chars, row->size + length + 1);
-  memcpy(&row->chars[row->size], s, length);
-  row->size += length;
-  row->chars[row->size] = '\0';
-  editorUpdateRow(row, tabSize);
+EditorRow *editorRowAppendString(EditorRow *row, char *s, size_t length) {
+  char *newChars = malloc(row->size + length + 1);
+  memcpy(newChars, row->chars, row->size);
+  memcpy(&newChars[row->size], s, length);
+  newChars[row->size + length] = '\0';
+  EditorRow *new = newRow(newChars, row->size + length, tabSize);
   editor.unsavedChanges++;
+  return new;
 }
 
-void editorRowDeleteChar(EditorRow *row, int at) {
-  if (at < 0 || at >= row->size) return;
-  memmove(&row->chars[at], &row->chars[at + 1], row->size - at);
-  row->size--;
-  editorUpdateRow(row, tabSize);
+EditorRow *editorRowDeleteChar(EditorRow *row, int at) {
+  if (at < 0 || at >= row->size) return row;
+  char *newChars = malloc(row->size);
+  memcpy(newChars, row->chars, at);
+  memcpy(&newChars[at], &row->chars[at + 1], row->size - at);
+  newChars[row->size - 1] = '\0';
+  EditorRow *new = newRow(newChars, row->size - 1, tabSize);
   editor.unsavedChanges++;
+  return new;
 }
 
 EditorRow *editorCurrentRow() {
@@ -258,31 +274,6 @@ EditorRow *editorPreviousRow() {
 
 /*** editor operations ***/
 
-void editorInsertChar(int c) {
-  EditorRow *row = editorCurrentRow();
-  if (row == NULL) {
-    editorInsertRow("", 0);
-  }
-  editorRowInsertChar(row, editor.cursorX, c);
-  editor.cursorX++;
-}
-
-void editorDeleteChar() {
-  EditorRow *current = editorCurrentRow();
-  if (current == NULL) return;
-  EditorRow *previous = editorPreviousRow();
-  if (previous == NULL && editor.cursorX == 0) return;
-  if (editor.cursorX > 0) {
-    editorRowDeleteChar(current, editor.cursorX - 1);
-    editor.cursorX--;
-  } else {
-    editor.cursorX = previous->size;
-    editorRowAppendString(previous, current->chars, current->size);
-    editorDeleteCurrentRow();
-    editor.cursorY--;
-  }
-}
-
 void editorForwardLine() {
   if (editorCurrentRow() != NULL) {
     zipperForwardRow(editor.buffer, NULL);
@@ -294,6 +285,58 @@ void editorBackwardLine() {
   if (editorPreviousRow() != NULL) {
     zipperBackwardRow(editor.buffer, NULL);
     editor.cursorRow--;
+  }
+}
+
+/**
+ * Replace the current row with a new one.
+ */
+void editorReplaceRow(EditorRow *row) {
+  RowList *old = editor.buffer->forwards;
+  if (old == NULL) {
+    editor.buffer->forwards = newRowList(row, NULL);
+  } else {
+    editor.buffer->forwards = newRowList(row, old->tail);
+  }
+}
+
+void editorInsertChar(int c) {
+  EditorRow *row = editorCurrentRow();
+  if (row == NULL) {
+    editorInsertRow("", 0);
+    row = editorCurrentRow();
+  }
+  EditorRow *new = editorRowInsertChar(row, editor.cursorX, c);
+  editorReplaceRow(new);
+  editor.cursorX++;
+}
+
+void editorInsertNewline() {
+  if (editor.cursorX == 0) {
+    editorInsertRowAfter("", 0);
+  } else {
+    // split current line in two
+  }
+}
+
+void editorDeleteChar() {
+  EditorRow *current = editorCurrentRow();
+  if (current == NULL) return;
+  EditorRow *previous = editorPreviousRow();
+  if (previous == NULL && editor.cursorX == 0) return;
+  if (editor.cursorX > 0) {
+    EditorRow *new = editorRowDeleteChar(current, editor.cursorX - 1);
+    editorReplaceRow(new);
+    editor.cursorX--;
+  } else {
+    editor.cursorX = previous->size;
+    EditorRow *new = editorRowAppendString(previous,
+                                           current->chars,
+                                           current->size);
+    editorDeleteCurrentRow();
+    editorBackwardLine();
+    editorReplaceRow(new);
+    editor.cursorY--;
   }
 }
 
@@ -609,6 +652,7 @@ void editorProcessKeypress() {
 
   switch (c) {
   case '\r':
+    editorInsertNewline();
     break;
   case CTRL_KEY('q'):
     if (editor.unsavedChanges && quitTimes > 0) {
