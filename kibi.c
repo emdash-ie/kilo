@@ -57,6 +57,7 @@ typedef struct EditorConfig {
   int unsavedChanges;
   struct termios original_termios;
   UndoStack *undo;
+  UndoStack *redo;
 } EditorConfig;
 
 EditorConfig editor;
@@ -181,16 +182,38 @@ void editorPushUndo() {
                          editor.cursorX, editor.undo);
 }
 
+void editorPushRedo() {
+  editor.redo = undoCons(editor.buffer->forwards,
+                         editor.buffer->backwards,
+                         editor.cursorX, editor.redo);
+}
+
 void editorUndo() {
   if (editor.undo == NULL) {
     editorSetStatusMessage("No more undo steps.");
     return;
   }
+  editorPushRedo();
   UndoStack *oldUndo = editor.undo;
   editor.buffer->forwards = oldUndo->forwards;
   editor.buffer->backwards = oldUndo->backwards;
   editor.cursorX = oldUndo->cursorX;
   editor.undo = oldUndo->tail;
+  free(oldUndo);
+}
+
+void editorRedo() {
+  if (editor.redo == NULL) {
+    editorSetStatusMessage("No more redo steps.");
+    return;
+  }
+  editorPushUndo();
+  UndoStack *oldRedo = editor.redo;
+  editor.buffer->forwards = oldRedo->forwards;
+  editor.buffer->backwards = oldRedo->backwards;
+  editor.cursorX = oldRedo->cursorX;
+  editor.redo = oldRedo->tail;
+  free(oldRedo);
 }
 
 void editorUndoSteps() {
@@ -205,28 +228,30 @@ void editorUndoSteps() {
 
 /*** row operations ***/
 
-void editorInsertRow(char *s, size_t length) {
-  editorPushUndo();
+void editorInsertRow(char *s, size_t length, bool pushUndo) {
+  if (pushUndo) {
+    editorPushUndo();
+  }
   zipperInsertRow(editor.buffer, newRow(s, length, tabSize));
   editor.numberOfRows++;
   editor.unsavedChanges++;
 }
 
-void editorInsertRowAfter(char *s, size_t length) {
+void editorInsertRowAfter(char *s, size_t length, bool pushUndo) {
   editorForwardLine();
-  editorInsertRow(s, length);
+  editorInsertRow(s, length, pushUndo);
   if (editor.cursorY < editor.screenrows - 1) {
     editor.cursorY++;
   }
 }
 
-void editorAppendRow(char *s, size_t length) {
+void editorAppendRow(char *s, size_t length, bool pushUndo) {
   int i = 0;
   while (editor.buffer->forwards != NULL) {
     zipperForwardRow(editor.buffer, NULL);
     i++;
   }
-  editorInsertRow(s, length);
+  editorInsertRow(s, length, pushUndo);
   while (i > 0) {
     zipperBackwardRow(editor.buffer, NULL);
     i--;
@@ -363,7 +388,7 @@ void editorReplaceRow(EditorRow *row) {
 void editorInsertChar(int c) {
   EditorRow *row = editorCurrentRow();
   if (row == NULL) {
-    editorInsertRow("", 0);
+    editorInsertRow("", 0, true);
     row = editorCurrentRow();
   }
   EditorRow *new = editorRowInsertChar(row, editor.cursorX, c);
@@ -388,7 +413,7 @@ void editorInsertRows(RowList *new) {
 void editorInsertNewline() {
   EditorRow *row = editorCurrentRow();
   if (editor.cursorX == 0 || row == NULL) {
-    editorInsertRowAfter("", 0);
+    editorInsertRowAfter("", 0, true);
   } else {
     RowList *new = editorRowSplit(row, editor.cursorX);
     editorDeleteCurrentRow();
@@ -471,7 +496,7 @@ void editorOpen(char *filename) {
            (line[lineLength - 1] == '\n' || line[lineLength - 1] == '\r')) {
       lineLength--;
     }
-    editorInsertRow(line, lineLength);
+    editorInsertRow(line, lineLength, false);
   }
   editor.buffer->forwards = rowListReverse(editor.buffer->forwards);
   free(line);
@@ -737,6 +762,9 @@ void editorProcessKeypress() {
   case CTRL_KEY('z'):
     editorUndo();
     break;
+  case CTRL_KEY('y'):
+    editorRedo();
+    break;
   case CTRL_KEY('x'):
     editorUndoSteps();
     break;
@@ -832,6 +860,8 @@ void initEditor() {
   editor.buffer->forwards = NULL;
   editor.buffer->backwards = NULL;
   editor.undo = NULL;
+  editor.undo = NULL;
+  editor.redo = NULL;
 
   if (getWindowSize(&editor.screenrows, &editor.screencols) == -1) die("getWindowSize");
   editor.screenrows -= 2;
