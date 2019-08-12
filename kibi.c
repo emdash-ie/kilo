@@ -190,7 +190,7 @@ void editorPushRedo() {
 
 void editorUndo() {
   if (editor.undo == NULL) {
-    editorSetStatusMessage("No more undo steps.");
+    editorSetStatusMessage("No further undo steps.");
     return;
   }
   editorPushRedo();
@@ -204,7 +204,7 @@ void editorUndo() {
 
 void editorRedo() {
   if (editor.redo == NULL) {
-    editorSetStatusMessage("No more redo steps.");
+    editorSetStatusMessage("No further redo steps.");
     return;
   }
   editorPushUndo();
