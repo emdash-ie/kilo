@@ -14,7 +14,7 @@ struct RowList {
   int number;
 };
 
-RowList *newRowList(EditorRow *head, RowList *tail);
+RowList *rowListCons(EditorRow *head, RowList *tail);
 
 /**
  * True if x is newer than y, false otherwise.

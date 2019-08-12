@@ -6,7 +6,7 @@
 
 int rowListId = 0;
 
-RowList *newRowList(EditorRow *head, RowList *tail) {
+RowList *rowListCons(EditorRow *head, RowList *tail) {
   RowList *rowList = malloc(sizeof(RowList));
   rowList->head = head;
   rowList->tail = tail;
@@ -59,7 +59,7 @@ void zipperForwardRow(ZipperBuffer *buffer, RowList *keepBefore) {
     updateRowList(oldForwards, oldForwards->head, oldBackwards);
     newBackwards = oldForwards;
   } else {
-    newBackwards = newRowList(oldForwards->head, oldBackwards);
+    newBackwards = rowListCons(oldForwards->head, oldBackwards);
   }
   buffer->forwards = newForwards;
   buffer->backwards = newBackwards;
@@ -81,7 +81,7 @@ void zipperBackwardRow(ZipperBuffer *buffer, RowList *keepBefore) {
     updateRowList(oldBackwards, oldBackwards->head, oldForwards);
     newForwards = oldBackwards;
   } else {
-    newForwards = newRowList(oldBackwards->head, oldForwards);
+    newForwards = rowListCons(oldBackwards->head, oldForwards);
   }
   buffer->forwards = newForwards;
   buffer->backwards = newBackwards;
@@ -95,7 +95,7 @@ void zipperBackwardN(ZipperBuffer *buffer, RowList *keepBefore, int n) {
 
 void zipperInsertRow(ZipperBuffer *buffer, EditorRow *new) {
   RowList *oldForwards = buffer->forwards;
-  RowList *newForwards = newRowList(new, oldForwards);
+  RowList *newForwards = rowListCons(new, oldForwards);
   buffer->forwards = newForwards;
 }
 
@@ -123,13 +123,13 @@ ZipperBuffer *exampleBuffer() {
   /* EditorRow *fifth = newRow("World serves its own needs, dummy serve your own needs", 0); */
   /* EditorRow *sixth = newRow("Feed it off an aux speak, grunt no strength", 0); */
   /* EditorRow *seventh = newRow("The ladder starts to clatter with fear of fight, down height", 0); */
-  /* RowList *forwards = newRowList(first, */
-  /*   newRowList(second, */
-  /*   newRowList(third, */
-  /*   newRowList(fourth, */
-  /*   newRowList(fifth, */
-  /*   newRowList(sixth, */
-  /*   newRowList(seventh, NULL))))))); */
+  /* RowList *forwards = rowListCons(first, */
+  /*   rowListCons(second, */
+  /*   rowListCons(third, */
+  /*   rowListCons(fourth, */
+  /*   rowListCons(fifth, */
+  /*   rowListCons(sixth, */
+  /*   rowListCons(seventh, NULL))))))); */
   ZipperBuffer *buffer = malloc(sizeof(ZipperBuffer));
   buffer->forwards = NULL;
   buffer->backwards = NULL;

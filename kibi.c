@@ -238,9 +238,7 @@ EditorRow *editorRowInsertChar(EditorRow *row, int at, int c) {
   memcpy(&newChars[at + 1], &row->chars[at], row->size - at);
   newChars[at] = c;
   newChars[row->size + 1] = '\0';
-  EditorRow *new = newRow(newChars, row->size + 1, tabSize);
-  editor.unsavedChanges++;
-  return new;
+  return newRow(newChars, row->size + 1, tabSize);
 }
 
 EditorRow *editorRowAppendString(EditorRow *row, char *s, size_t length) {
@@ -248,9 +246,7 @@ EditorRow *editorRowAppendString(EditorRow *row, char *s, size_t length) {
   memcpy(newChars, row->chars, row->size);
   memcpy(&newChars[row->size], s, length);
   newChars[row->size + length] = '\0';
-  EditorRow *new = newRow(newChars, row->size + length, tabSize);
-  editor.unsavedChanges++;
-  return new;
+  return newRow(newChars, row->size + length, tabSize);
 }
 
 EditorRow *editorRowDeleteChar(EditorRow *row, int at) {
@@ -259,9 +255,36 @@ EditorRow *editorRowDeleteChar(EditorRow *row, int at) {
   memcpy(newChars, row->chars, at);
   memcpy(&newChars[at], &row->chars[at + 1], row->size - at);
   newChars[row->size - 1] = '\0';
-  EditorRow *new = newRow(newChars, row->size - 1, tabSize);
-  editor.unsavedChanges++;
-  return new;
+  return newRow(newChars, row->size - 1, tabSize);
+}
+
+/**
+ * Create a new row with the first n characters of row.
+ */
+EditorRow *editorRowTake(EditorRow *row, unsigned int n) {
+  char *newChars = malloc(n + 1);
+  memcpy(newChars, row->chars, n);
+  newChars[n] = '\0';
+  return newRow(newChars, n, tabSize);
+}
+
+/**
+ * Create a new row with all characters of row after the first n.
+ */
+EditorRow *editorRowDrop(EditorRow *row, unsigned int n) {
+  char *newChars = malloc(row->size - n + 1);
+  memcpy(newChars, &row->chars[n], row->size - n);
+  newChars[row->size - n] = '\0';
+  return newRow(newChars, row->size - n, tabSize);
+}
+
+/**
+ * Split a row at an index, return a RowList of the two new rows.
+ */
+RowList *editorRowSplit(EditorRow *row, unsigned int at) {
+  EditorRow *first = editorRowTake(row, at);
+  EditorRow *second = editorRowDrop(row, at);
+  return rowListCons(first, rowListCons(second, NULL));
 }
 
 EditorRow *editorCurrentRow() {
@@ -294,10 +317,11 @@ void editorBackwardLine() {
 void editorReplaceRow(EditorRow *row) {
   RowList *old = editor.buffer->forwards;
   if (old == NULL) {
-    editor.buffer->forwards = newRowList(row, NULL);
+    editor.buffer->forwards = rowListCons(row, NULL);
   } else {
-    editor.buffer->forwards = newRowList(row, old->tail);
+    editor.buffer->forwards = rowListCons(row, old->tail);
   }
+  editor.unsavedChanges++;
 }
 
 void editorInsertChar(int c) {
@@ -311,11 +335,30 @@ void editorInsertChar(int c) {
   editor.cursorX++;
 }
 
+void editorInsertRows(RowList *new) {
+  if (new == NULL) return;
+  RowList *end = new;
+  int added = 1;
+  while (end->tail != NULL) {
+    end = end->tail;
+    added++;
+  }
+  end->tail = editor.buffer->forwards;
+  editor.buffer->forwards = new;
+  editor.unsavedChanges += added;
+}
+
 void editorInsertNewline() {
-  if (editor.cursorX == 0) {
+  EditorRow *row = editorCurrentRow();
+  if (editor.cursorX == 0 || row == NULL) {
     editorInsertRowAfter("", 0);
   } else {
-    // split current line in two
+    RowList *new = editorRowSplit(row, editor.cursorX);
+    editorDeleteCurrentRow();
+    editorInsertRows(new);
+    editorForwardLine();
+    editor.cursorX = 0;
+    editor.cursorY++;
   }
 }
 
