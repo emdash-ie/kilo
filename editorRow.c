@@ -5,9 +5,7 @@
 EditorRow *newRow(char *s, size_t length, int tabSize) {
   EditorRow *row = malloc(sizeof(*row));
   row->size = length;
-  row->chars = malloc(length + 1);
-  memcpy(row->chars, s, length);
-  row->chars[length] = '\0';
+  row->chars = s;
   row->renderSize = 0;
   row->renderChars = NULL;
   editorUpdateRow(row, tabSize);

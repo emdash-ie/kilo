@@ -496,7 +496,10 @@ void editorOpen(char *filename) {
            (line[lineLength - 1] == '\n' || line[lineLength - 1] == '\r')) {
       lineLength--;
     }
-    editorInsertRow(line, lineLength, false);
+    char *rowChars = malloc(lineLength + 1);
+    memcpy(rowChars, line, lineLength);
+    rowChars[lineLength + 1] = '\0';
+    editorInsertRow(rowChars, lineLength, false);
   }
   editor.buffer->forwards = rowListReverse(editor.buffer->forwards);
   free(line);
