@@ -18,6 +18,7 @@
 #include <fcntl.h>
 #include "editorRow.h"
 #include "zipperBuffer.h"
+#include "undo.h"
 
 /*** defines ***/
 
@@ -55,6 +56,7 @@ typedef struct EditorConfig {
   time_t statusMessageTime;
   int unsavedChanges;
   struct termios original_termios;
+  UndoStack *undo;
 } EditorConfig;
 
 EditorConfig editor;
@@ -171,9 +173,40 @@ int getWindowSize(int *rows, int *cols) {
   }
 }
 
+/*** undo ***/
+
+void editorPushUndo() {
+  editor.undo = undoCons(editor.buffer->forwards,
+                         editor.buffer->backwards,
+                         editor.cursorX, editor.undo);
+}
+
+void editorUndo() {
+  if (editor.undo == NULL) {
+    editorSetStatusMessage("No more undo steps.");
+    return;
+  }
+  UndoStack *oldUndo = editor.undo;
+  editor.buffer->forwards = oldUndo->forwards;
+  editor.buffer->backwards = oldUndo->backwards;
+  editor.cursorX = oldUndo->cursorX;
+  editor.undo = oldUndo->tail;
+}
+
+void editorUndoSteps() {
+  int n = 0;
+  UndoStack *temp = editor.undo;
+  while (temp != NULL) {
+    n++;
+    temp = temp->tail;
+  }
+  editorSetStatusMessage("%d undo steps.", n);
+}
+
 /*** row operations ***/
 
 void editorInsertRow(char *s, size_t length) {
+  editorPushUndo();
   zipperInsertRow(editor.buffer, newRow(s, length, tabSize));
   editor.numberOfRows++;
   editor.unsavedChanges++;
@@ -202,6 +235,7 @@ void editorAppendRow(char *s, size_t length) {
 
 void editorDeleteCurrentRow() {
   if (editor.buffer->forwards == NULL) return;
+  editorPushUndo();
   editor.buffer->forwards = editor.buffer->forwards->tail;
   editor.numberOfRows--;
   editor.unsavedChanges++;
@@ -315,6 +349,8 @@ void editorBackwardLine() {
  * Replace the current row with a new one.
  */
 void editorReplaceRow(EditorRow *row) {
+  if (row == NULL) return;
+  editorPushUndo();
   RowList *old = editor.buffer->forwards;
   if (old == NULL) {
     editor.buffer->forwards = rowListCons(row, NULL);
@@ -337,6 +373,7 @@ void editorInsertChar(int c) {
 
 void editorInsertRows(RowList *new) {
   if (new == NULL) return;
+  editorPushUndo();
   RowList *end = new;
   int added = 1;
   while (end->tail != NULL) {
@@ -697,6 +734,12 @@ void editorProcessKeypress() {
   case '\r':
     editorInsertNewline();
     break;
+  case CTRL_KEY('z'):
+    editorUndo();
+    break;
+  case CTRL_KEY('x'):
+    editorUndoSteps();
+    break;
   case CTRL_KEY('q'):
     if (editor.unsavedChanges && quitTimes > 0) {
       editorSetStatusMessage("There are unsaved changes. Press Ctrl-q again to quit.");
@@ -788,6 +831,7 @@ void initEditor() {
   editor.buffer = malloc(sizeof(*editor.buffer));
   editor.buffer->forwards = NULL;
   editor.buffer->backwards = NULL;
+  editor.undo = NULL;
 
   if (getWindowSize(&editor.screenrows, &editor.screencols) == -1) die("getWindowSize");
   editor.screenrows -= 2;
