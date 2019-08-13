@@ -33,15 +33,16 @@ typedef struct ZipperBuffer ZipperBuffer;
 struct ZipperBuffer {
   RowList *forwards;
   RowList *backwards;
+  RowList *newest;
 };
 
-void zipperForwardRow(ZipperBuffer *buffer, RowList *keepBefore);
+void zipperForwardRow(ZipperBuffer *buffer);
 
-void zipperForwardN(ZipperBuffer *buffer, RowList *keepBefore, int n);
+void zipperForwardN(ZipperBuffer *buffer, int n);
 
-void zipperBackwardRow(ZipperBuffer *buffer, RowList *keepBefore);
+void zipperBackwardRow(ZipperBuffer *buffer);
 
-void zipperBackwardN(ZipperBuffer *buffer, RowList *keepBefore, int n);
+void zipperBackwardN(ZipperBuffer *buffer, int n);
 
 void zipperInsertRow(ZipperBuffer *buffer, EditorRow *new);
 

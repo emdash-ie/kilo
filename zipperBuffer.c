@@ -49,47 +49,41 @@ RowList *rowListReverse(RowList *rows) {
   return last;
 }
 
-void zipperForwardRow(ZipperBuffer *buffer, RowList *keepBefore) {
+void zipperForwardRow(ZipperBuffer *buffer) {
   if (buffer->forwards == NULL) return;
   RowList *oldForwards = buffer->forwards;
   RowList *newForwards = buffer->forwards->tail;
   RowList *oldBackwards = buffer->backwards;
-  RowList *newBackwards;
-  if (rowListNewer(oldForwards, keepBefore)) {
-    updateRowList(oldForwards, oldForwards->head, oldBackwards);
-    newBackwards = oldForwards;
-  } else {
-    newBackwards = rowListCons(oldForwards->head, oldBackwards);
+  RowList *newBackwards = rowListCons(oldForwards->head, oldBackwards);
+  if (rowListNewer(oldForwards, buffer->newest)) {
+    free(oldForwards);
   }
   buffer->forwards = newForwards;
   buffer->backwards = newBackwards;
 }
 
-void zipperForwardN(ZipperBuffer *buffer, RowList *keepBefore, int n) {
+void zipperForwardN(ZipperBuffer *buffer, int n) {
   for (;n > 0; n--) {
-    zipperForwardRow(buffer, keepBefore);
+    zipperForwardRow(buffer);
   }
 }
 
-void zipperBackwardRow(ZipperBuffer *buffer, RowList *keepBefore) {
+void zipperBackwardRow(ZipperBuffer *buffer) {
   if (buffer->backwards == NULL) return;
   RowList *oldBackwards = buffer->backwards;
   RowList *newBackwards = buffer->backwards->tail;
   RowList *oldForwards = buffer->forwards;
-  RowList *newForwards;
-  if (rowListNewer(oldBackwards, keepBefore)) {
-    updateRowList(oldBackwards, oldBackwards->head, oldForwards);
-    newForwards = oldBackwards;
-  } else {
-    newForwards = rowListCons(oldBackwards->head, oldForwards);
+  RowList *newForwards = rowListCons(oldBackwards->head, oldForwards);
+  if (rowListNewer(oldBackwards, buffer->newest)) {
+    free(oldBackwards);
   }
   buffer->forwards = newForwards;
   buffer->backwards = newBackwards;
 }
 
-void zipperBackwardN(ZipperBuffer *buffer, RowList *keepBefore, int n) {
+void zipperBackwardN(ZipperBuffer *buffer, int n) {
   for (;n > 0; n--) {
-    zipperBackwardRow(buffer, keepBefore);
+    zipperBackwardRow(buffer);
   }
 }
 
@@ -97,6 +91,7 @@ void zipperInsertRow(ZipperBuffer *buffer, EditorRow *new) {
   RowList *oldForwards = buffer->forwards;
   RowList *newForwards = rowListCons(new, oldForwards);
   buffer->forwards = newForwards;
+  buffer->newest = newForwards;
 }
 
 void printRowList(RowList *list) {
@@ -133,6 +128,7 @@ ZipperBuffer *exampleBuffer() {
   ZipperBuffer *buffer = malloc(sizeof(ZipperBuffer));
   buffer->forwards = NULL;
   buffer->backwards = NULL;
+  buffer->newest = NULL;
   return buffer;
 }
 
@@ -144,10 +140,10 @@ int testZipperBuffer() {
   while (1) {
     printf("Iteration %d\n", ++i);
     while (buffer->forwards != NULL) {
-      zipperForwardRow(buffer, NULL);
+      zipperForwardRow(buffer);
     }
     while (buffer->backwards != NULL) {
-      zipperBackwardRow(buffer, NULL);
+      zipperBackwardRow(buffer);
     }
   }
 }

@@ -248,12 +248,12 @@ void editorInsertRowAfter(char *s, size_t length, bool pushUndo) {
 void editorAppendRow(char *s, size_t length, bool pushUndo) {
   int i = 0;
   while (editor.buffer->forwards != NULL) {
-    zipperForwardRow(editor.buffer, NULL);
+    zipperForwardRow(editor.buffer);
     i++;
   }
   editorInsertRow(s, length, pushUndo);
   while (i > 0) {
-    zipperBackwardRow(editor.buffer, NULL);
+    zipperBackwardRow(editor.buffer);
     i--;
   }
 }
@@ -272,21 +272,21 @@ void editorDeleteRow(int at) {
   }
   int moves = 0;
   while (editor.buffer->backwards != NULL) {
-    zipperBackwardRow(editor.buffer, NULL);
+    zipperBackwardRow(editor.buffer);
     moves--;
   }
   moves += at;
   while (at > 0) {
-    zipperForwardRow(editor.buffer, NULL);
+    zipperForwardRow(editor.buffer);
     at--;
   }
   editorDeleteCurrentRow();
   while (moves < -1) {
-    zipperForwardRow(editor.buffer, NULL);
+    zipperForwardRow(editor.buffer);
     moves++;
   }
   while (moves > 0) {
-    zipperBackwardRow(editor.buffer, NULL);
+    zipperBackwardRow(editor.buffer);
   }
 }
 
@@ -358,14 +358,14 @@ EditorRow *editorPreviousRow() {
 
 void editorForwardLine() {
   if (editorCurrentRow() != NULL) {
-    zipperForwardRow(editor.buffer, NULL);
+    zipperForwardRow(editor.buffer);
     editor.cursorRow++;
   }
 }
 
 void editorBackwardLine() {
   if (editorPreviousRow() != NULL) {
-    zipperBackwardRow(editor.buffer, NULL);
+    zipperBackwardRow(editor.buffer);
     editor.cursorRow--;
   }
 }
@@ -418,6 +418,7 @@ void editorInsertNewline() {
     RowList *new = editorRowSplit(row, editor.cursorX);
     editorDeleteCurrentRow();
     editorInsertRows(new);
+
     editorForwardLine();
     editor.cursorX = 0;
     editor.cursorY++;
@@ -457,13 +458,13 @@ void editorJumpToEnd() {
 char *editorRowsToString(int *bufferLength) {
   int rowsToEnd = 0;
   while (editor.buffer->forwards != NULL) {
-    zipperForwardRow(editor.buffer, NULL);
+    zipperForwardRow(editor.buffer);
     rowsToEnd++;
   }
   int totalLength = 0;
   while (editor.buffer->backwards != NULL) {
     totalLength += editor.buffer->backwards->head->size + 1;
-    zipperBackwardRow(editor.buffer, NULL);
+    zipperBackwardRow(editor.buffer);
   }
   *bufferLength = totalLength;
 
@@ -477,7 +478,7 @@ char *editorRowsToString(int *bufferLength) {
     p++;
   }
   while (rowsToEnd > 0) {
-    zipperBackwardRow(editor.buffer, NULL);
+    zipperBackwardRow(editor.buffer);
     rowsToEnd--;
   }
   return buffer;
@@ -862,6 +863,7 @@ void initEditor() {
   editor.buffer = malloc(sizeof(*editor.buffer));
   editor.buffer->forwards = NULL;
   editor.buffer->backwards = NULL;
+  editor.buffer->newest = NULL;
   editor.undo = NULL;
   editor.undo = NULL;
   editor.redo = NULL;
