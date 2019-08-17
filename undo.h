@@ -9,9 +9,15 @@ struct UndoStack {
   RowList *forwards;
   RowList *backwards;
   int cursorX;
+  int cursorY;
   UndoStack *tail;
 };
 
-UndoStack *undoCons(RowList *forwards, RowList *backwards, int cursorX, UndoStack *tail);
+
+UndoStack *undoCons(RowList *forwards,
+                    RowList *backwards,
+                    int cursorX,
+                    int cursorY,
+                    UndoStack *tail);
 
 #endif

@@ -58,6 +58,8 @@ typedef struct EditorConfig {
   struct termios original_termios;
   UndoStack *undo;
   UndoStack *redo;
+  void (*log)(char *format, ...);
+  FILE *logFile;
 } EditorConfig;
 
 EditorConfig editor;
@@ -67,6 +69,26 @@ EditorConfig editor;
 void editorForwardLine();
 
 void editorSetStatusMessage(const char *format, ...);
+
+/*** logging ***/
+
+void stderrLog(char *format, ...) {
+  va_list args;
+  va_start(args, format);
+  vprintf(format, args);
+  va_end(args);
+}
+
+void fileLog(char *format, ...) {
+  va_list args;
+  va_start(args, format);
+  vfprintf(editor.logFile, format, args);
+  va_end(args);
+}
+
+void noLog(char *format, ...) {
+  return;
+}
 
 /*** terminal ***/
 
@@ -177,15 +199,19 @@ int getWindowSize(int *rows, int *cols) {
 /*** undo ***/
 
 void editorPushUndo() {
+  RowList *newest = rowListNewer(editor.buffer->forwards, editor.buffer->backwards)
+    ? editor.buffer->forwards
+    : editor.buffer->backwards;
+  editor.buffer->newest = newest;
   editor.undo = undoCons(editor.buffer->forwards,
                          editor.buffer->backwards,
-                         editor.cursorX, editor.undo);
+                         editor.cursorX, editor.cursorY, editor.undo);
 }
 
 void editorPushRedo() {
   editor.redo = undoCons(editor.buffer->forwards,
                          editor.buffer->backwards,
-                         editor.cursorX, editor.redo);
+                         editor.cursorX, editor.cursorY, editor.redo);
 }
 
 void editorUndo() {
@@ -198,6 +224,7 @@ void editorUndo() {
   editor.buffer->forwards = oldUndo->forwards;
   editor.buffer->backwards = oldUndo->backwards;
   editor.cursorX = oldUndo->cursorX;
+  editor.cursorY = oldUndo->cursorY;
   editor.undo = oldUndo->tail;
   free(oldUndo);
 }
@@ -212,6 +239,7 @@ void editorRedo() {
   editor.buffer->forwards = oldRedo->forwards;
   editor.buffer->backwards = oldRedo->backwards;
   editor.cursorX = oldRedo->cursorX;
+  editor.cursorY = oldRedo->cursorY;
   editor.redo = oldRedo->tail;
   free(oldRedo);
 }
@@ -238,8 +266,11 @@ void editorInsertRow(char *s, size_t length, bool pushUndo) {
 }
 
 void editorInsertRowAfter(char *s, size_t length, bool pushUndo) {
-  editorForwardLine();
-  editorInsertRow(s, length, pushUndo);
+  if (pushUndo) {
+    editorPushUndo();
+  }
+  editorForwardLine(); // may free what was just pushed onto undo
+  editorInsertRow(s, length, false);
   if (editor.cursorY < editor.screenrows - 1) {
     editor.cursorY++;
   }
@@ -256,6 +287,10 @@ void editorAppendRow(char *s, size_t length, bool pushUndo) {
     zipperBackwardRow(editor.buffer);
     i--;
   }
+}
+
+void editorDeleteBetween(int startRow, int startColumn, int endRow, int endColumn) {
+
 }
 
 void editorDeleteCurrentRow() {
@@ -876,6 +911,12 @@ int main(int argc, char *argv[]) {
   enableRawMode();
   initEditor();
   if (argc >= 2) {
+    if (argc >= 4) {
+      editor.log = fileLog;
+      editor.logFile = fopen(argv[3], "w");
+    } else {
+      editor.log = noLog;
+    }
     editorOpen(argv[1]);
   }
 
@@ -884,6 +925,9 @@ int main(int argc, char *argv[]) {
   while (1) {
     editorRefreshScreen();
     editorProcessKeypress();
+  }
+  if (argc >= 4) {
+    fclose(editor.logFile);
   }
   return 0;
 }
