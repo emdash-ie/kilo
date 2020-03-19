@@ -488,6 +488,13 @@ void editorJumpToEnd() {
   editor.cursorY = editor.screenrows - 1;
 }
 
+void editorJumpToStart() {
+  while (editorPreviousRow() != NULL) {
+    editorBackwardLine();
+  }
+  editor.cursorY = 0;
+}
+
 /*** file i/o ***/
 
 char *editorRowsToString(int *bufferLength) {
