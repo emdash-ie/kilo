@@ -511,6 +511,7 @@ char *editorRowsToString(int *bufferLength) {
     p += editor.buffer->forwards->head->size;
     *p = '\n';
     p++;
+    zipperForwardRow(editor.buffer);
   }
   while (rowsToEnd > 0) {
     zipperBackwardRow(editor.buffer);
@@ -902,6 +903,7 @@ void initEditor() {
   editor.undo = NULL;
   editor.undo = NULL;
   editor.redo = NULL;
+  editor.log = stderrLog;
 
   if (getWindowSize(&editor.screenrows, &editor.screencols) == -1) die("getWindowSize");
   editor.screenrows -= 2;
