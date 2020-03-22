@@ -269,7 +269,7 @@ void editorInsertRowAfter(char *s, size_t length, bool pushUndo) {
   if (pushUndo) {
     editorPushUndo();
   }
-  editorForwardLine(); // may free what was just pushed onto undo
+  editorForwardLine();
   editorInsertRow(s, length, false);
   if (editor.cursorY < editor.screenrows - 1) {
     editor.cursorY++;
