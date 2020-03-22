@@ -16,6 +16,8 @@ struct RowList {
 
 RowList *rowListCons(EditorRow *head, RowList *tail);
 
+RowList *rowListDrop(RowList *list, int n);
+
 /**
  * True if x is newer than y, false otherwise.
  */
@@ -45,6 +47,10 @@ void zipperBackwardRow(ZipperBuffer *buffer);
 void zipperBackwardN(ZipperBuffer *buffer, int n);
 
 void zipperInsertRow(ZipperBuffer *buffer, EditorRow *new);
+
+RowList *zipperRowsFrom(ZipperBuffer *buffer, int n);
+
+void zipperUpdateNewest(ZipperBuffer *buffer);
 
 void printRowList(RowList *list);
 

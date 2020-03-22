@@ -6,6 +6,14 @@
 
 int rowListId = 0;
 
+RowList *rowListDrop(RowList *list, int n) {
+  if (n <= 0) {
+    return list;
+  } else {
+    return rowListDrop(list->tail, n - 1);
+  }
+}
+
 RowList *rowListCons(EditorRow *head, RowList *tail) {
   RowList *rowList = malloc(sizeof(RowList));
   rowList->head = head;
@@ -92,6 +100,28 @@ void zipperInsertRow(ZipperBuffer *buffer, EditorRow *new) {
   RowList *newForwards = rowListCons(new, oldForwards);
   buffer->forwards = newForwards;
   buffer->newest = newForwards;
+}
+
+RowList *zipperRowsFrom(ZipperBuffer *buffer, int n) {
+  if (n >= 0) {
+    zipperUpdateNewest(buffer);
+    return rowListDrop(buffer->forwards, n);
+  } else {
+    zipperBackwardN(buffer, -n);
+    RowList *rows = buffer->forwards;
+    zipperUpdateNewest(buffer);
+    zipperForwardN(buffer, -n);
+    return rows;
+  }
+}
+
+void zipperUpdateNewest(ZipperBuffer *buffer) {
+  RowList *thisNewest = rowListNewer(buffer->forwards, buffer->backwards)
+    ? buffer->forwards
+    : buffer->backwards;
+  buffer->newest = rowListNewer(thisNewest, buffer->newest)
+    ? thisNewest
+    : buffer->newest;
 }
 
 void printRowList(RowList *list) {

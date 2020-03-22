@@ -16,9 +16,11 @@
 #include <time.h>
 #include <stdarg.h>
 #include <fcntl.h>
+
 #include "editorRow.h"
-#include "zipperBuffer.h"
+#include "pane.h"
 #include "undo.h"
+#include "zipperBuffer.h"
 
 /*** defines ***/
 
@@ -199,10 +201,7 @@ int getWindowSize(int *rows, int *cols) {
 /*** undo ***/
 
 void editorPushUndo() {
-  RowList *newest = rowListNewer(editor.buffer->forwards, editor.buffer->backwards)
-    ? editor.buffer->forwards
-    : editor.buffer->backwards;
-  editor.buffer->newest = newest;
+  zipperUpdateNewest(editor.buffer);
   editor.undo = undoCons(editor.buffer->forwards,
                          editor.buffer->backwards,
                          editor.cursorX, editor.cursorY, editor.undo);
