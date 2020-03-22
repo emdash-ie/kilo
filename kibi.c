@@ -703,7 +703,7 @@ void editorDrawRows(struct abuf *ab) {
   if (editor.numberOfRows == 0) {
     editorDrawWelcome(ab);
   } else {
-    RowList *rows = zipperRowsFrom(editor.buffer, editor.pane->top);
+    RowList *rows = zipperRowsFrom(editor.buffer, editor.pane->top - editor.cursorY);
     PaneContents *contents = paneDraw(editor.pane, rows);
     int drawn = 0;
     while (contents != NULL && drawn < editor.pane->height) {
@@ -728,6 +728,9 @@ void editorDrawMessageBar(struct abuf *ab) {
 }
 
 void editorRefreshScreen() {
+  if (getWindowSize(&editor.pane->height, &editor.pane->width) == -1)
+    die("getWindowSize");
+  editor.pane->height -= 2;
   editorScroll();
   struct abuf ab = ABUF_INIT;
 
@@ -918,7 +921,8 @@ void initEditor() {
   editor.log = stderrLog;
   editor.pane = makePane(0, 0, 0, 0, 0, 0);
 
-  if (getWindowSize(&editor.pane->height, &editor.pane->width) == -1) die("getWindowSize");
+  if (getWindowSize(&editor.pane->height, &editor.pane->width) == -1)
+    die("getWindowSize");
   editor.pane->height -= 2;
 }
 

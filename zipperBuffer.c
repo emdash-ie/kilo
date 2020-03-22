@@ -104,7 +104,6 @@ void zipperInsertRow(ZipperBuffer *buffer, EditorRow *new) {
 
 RowList *zipperRowsFrom(ZipperBuffer *buffer, int n) {
   if (n >= 0) {
-    zipperUpdateNewest(buffer);
     return rowListDrop(buffer->forwards, n);
   } else {
     zipperBackwardN(buffer, -n);
