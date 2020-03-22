@@ -11,6 +11,17 @@ PaneContents *paneContentsCons(char *row, int width, PaneContents *tail) {
   return contents;
 }
 
+Pane *makePane(int cursorX, int cursorY, int top, int left, int width, int height) {
+  Pane *p = malloc(sizeof(Pane));
+  p->cursorX = cursorX;
+  p->cursorY = cursorY;
+  p->top = top;
+  p->left = left;
+  p->width = width;
+  p->height = height;
+  return p;
+}
+
 PaneContents *drawRow(int left, int width, EditorRow *r) {
   int x = clip(left, 0, r->renderSize);
   int resultWidth = clip(r->renderSize - x, 0, width);
@@ -27,7 +38,7 @@ PaneContents *drawPane(int height, int left, int width, RowList *rows) {
   return head;
 }
 
-PaneContents *draw(Pane *p, RowList *rows) {
+PaneContents *paneDraw(Pane *p, RowList *rows) {
   return drawPane(p->height, p->left, p->width, rows);
 }
 

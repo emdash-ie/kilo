@@ -18,6 +18,8 @@ typedef struct Pane {
   int height;
 } Pane;
 
+Pane *makePane(int cursorX, int cursorY, int top, int left, int width, int height);
+
 typedef struct PaneContents {
   char *row;
   int width;
@@ -26,4 +28,4 @@ typedef struct PaneContents {
 
 PaneContents *paneContentsCons(char *row, int width, PaneContents *tail);
 
-PaneContents *draw(Pane *p, RowList *rows);
+PaneContents *paneDraw(Pane *p, RowList *rows);
