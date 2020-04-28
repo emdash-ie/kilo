@@ -860,7 +860,8 @@ void editorUpdateWindowSize() {
 
 void editorRefreshScreen() {
   editorUpdateWindowSize();
-  editorScroll(editor.activePane, editor.leftFile);
+  editorScroll(editor.leftPane, editor.leftFile);
+  editorScroll(editor.rightPane, editor.rightFile);
   struct abuf ab = ABUF_INIT;
 
   abAppend(&ab, "\x1b[?25l", 6);
@@ -870,9 +871,12 @@ void editorRefreshScreen() {
   editorDrawStatusBar(&ab);
   editorDrawMessageBar(&ab);
   char buf[32];
-  snprintf(buf, sizeof(buf), "\x1b[%d;%dH",
-           editor.leftFile->cursorY + 1,
-           (editor.activePane->cursorX - editor.activePane->left) + 1);
+  int paneOffsetX = editor.activePane == editor.leftPane
+    ? 0
+    : editor.leftPane->width;
+  int screenCursorX = paneOffsetX + editor.activePane->cursorX + 1;
+  int screenCursorY = editor.activePane->cursorY + 1;
+  snprintf(buf, sizeof(buf), "\x1b[%d;%dH", screenCursorY, screenCursorX);
   abAppend(&ab, buf, strlen(buf));
   abAppend(&ab, "\x1b[?25h", 6);
 
