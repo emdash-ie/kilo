@@ -4,6 +4,8 @@
 /**
  * Rectangular area onscreen, with a cursor.
  *
+ * cursorX: x-position of the screen cursor, relative to the pane. Leftmost is 0.
+ * cursorY: y-position of the screen cursor, relative to the pane. Topmost is 0.
  * top: top of pane starts this many lines from the top of the buffer
  * left: left of pane starts this many characters from the left of the
  *   buffer
