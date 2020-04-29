@@ -2,7 +2,8 @@
 #include "zipperBuffer.h"
 
 /**
- * Rectangular area onscreen, with a cursor.
+ * Rectangular area onscreen, with a cursor. Note that the cursor counts screen
+ * spaces, and so must e.g. convert tabs to spaces.
  *
  * cursorX: x-position of the screen cursor, relative to the pane. Leftmost is 0.
  * cursorY: y-position of the screen cursor, relative to the pane. Topmost is 0.
@@ -13,7 +14,8 @@
  * height: height of the pane in lines
  */
 typedef struct Pane {
-  int cursorX, cursorY;
+  int cursorX;
+  int cursorY;
   int top;
   int left;
   int width;
