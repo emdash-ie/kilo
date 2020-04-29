@@ -466,17 +466,17 @@ EditorRow *editorPreviousRow(ZipperBuffer *buffer) {
 
 /*** editor operations ***/
 
-void editorForwardLine(ZipperBuffer *buffer) {
+void editorForwardLine(ZipperBuffer *buffer, int *cursorY) {
   if (editorCurrentRow(buffer) != NULL) {
+    *cursorY += 1;
     zipperForwardRow(buffer);
-    editor.activePane->cursorY++;
   }
 }
 
-void editorBackwardLine(ZipperBuffer *buffer) {
+void editorBackwardLine(ZipperBuffer *buffer, int *cursorY) {
   if (editorPreviousRow(buffer) != NULL) {
+    *cursorY -= 1;
     zipperBackwardRow(buffer);
-    editor.activePane->cursorY--;
   }
 }
 
@@ -551,9 +551,8 @@ void editorInsertNewline(
     editorDeleteCurrentRow(buffer, undo, numberOfRows, unsavedChanges, *cursorX, *cursorY);
     editorInsertRows(buffer, undo, *cursorX, *cursorY, new, unsavedChanges);
 
-    editorForwardLine(buffer);
+    editorForwardLine(buffer, cursorY);
     *cursorX = 0;
-    *cursorY += 1;
   }
 }
 
@@ -579,9 +578,8 @@ void editorDeleteChar(
                                            current->chars,
                                            current->size);
     editorDeleteCurrentRow(buffer, undo, numberOfRows, unsavedChanges, *cursorX, *cursorY);
-    editorBackwardLine(buffer);
+    editorBackwardLine(buffer, cursorY);
     editorReplaceRow(buffer, undo, *cursorX, *cursorY, unsavedChanges, new);
-    *cursorY -= 1;
   }
 }
 
@@ -590,9 +588,8 @@ void editorJumpToEnd(
   int *cursorY
 ) {
   while (editorCurrentRow(buffer) != NULL) {
-    editorForwardLine(buffer);
+    editorForwardLine(buffer, cursorY);
   }
-  *cursorY = editor.activePane->height - 1;
 }
 
 void editorJumpToStart(
@@ -600,9 +597,8 @@ void editorJumpToStart(
   int *cursorY
 ) {
   while (editorPreviousRow(buffer) != NULL) {
-    editorBackwardLine(buffer);
+    editorBackwardLine(buffer, cursorY);
   }
-  *cursorY = 0;
 }
 
 /*** file i/o ***/
@@ -729,12 +725,14 @@ void editorScroll(Pane *pane, FileData *fileData) {
   if (pane->cursorX >= pane->left + pane->width) {
     pane->left = pane->cursorX - pane->width + 1;
   }
-  if (fileData->cursorY < pane->top) {
-    pane->top = fileData->cursorY;
+  pane->cursorY = fileData->cursorY - pane->top;
+  if (pane->cursorY < 0) {
+    pane->top += pane->cursorY;
   }
-  if (fileData->cursorY >= pane->top + pane->height) {
+  if (pane->cursorY >= pane->height) {
     pane->top = fileData->cursorY - pane->height + 1;
   }
+  pane->cursorY = fileData->cursorY - pane->top;
 }
 
 void editorDrawString(struct abuf *ab, char *s, int length) {
@@ -764,7 +762,7 @@ void editorDrawEmpties(struct abuf *ab, int numberOfLines) {
   }
 }
 
-void editorDrawStatusBar(struct abuf *ab) {
+void editorDrawStatusBar(struct abuf *ab, int top, int left, int height, int width, int cursorX, int cursorY, int fileCursorX, int fileCursorY) {
   char status[80], rightStatus[80];
   int length = snprintf(status, sizeof(status), "\"%.20s\" - %d lines %s",
                         editor.leftFile->filename
@@ -772,7 +770,8 @@ void editorDrawStatusBar(struct abuf *ab) {
                           : "[No name]",
                         editor.leftFile->numberOfRows,
                         editor.leftFile->unsavedChanges ? "(modified)" : "");
-  int rightLength = snprintf(rightStatus, sizeof(rightStatus), "%d/%d",
+  int rightLength = snprintf(rightStatus, sizeof(rightStatus), "(%d,%d,%d,%d,%d,%d,%d,%d) %d/%d",
+                             top, left, height, width, cursorX, cursorY, fileCursorX, fileCursorY,
                              editor.activePane->cursorY + 1, editor.leftFile->numberOfRows);
   if (length > editor.activePane->width) length = editor.activePane->width;
   abAppend(ab, status, length);
@@ -813,9 +812,9 @@ void editorDrawRows(struct abuf *ab) {
   if (editor.leftFile->numberOfRows == 0) {
     editorDrawWelcome(ab);
   } else {
-    RowList *leftRows = zipperRowsFrom(editor.leftFile->buffer, editor.leftPane->top);
+    RowList *leftRows = zipperRowsFrom(editor.leftFile->buffer, editor.leftFile->cursorY, editor.leftPane->top);
     PaneContents *leftContents = paneDraw(editor.leftPane, leftRows);
-    RowList *rightRows = zipperRowsFrom(editor.rightFile->buffer, editor.rightPane->top);
+    RowList *rightRows = zipperRowsFrom(editor.rightFile->buffer, editor.rightFile->cursorY, editor.rightPane->top);
     PaneContents *rightContents = paneDraw(editor.rightPane, rightRows);
     int linesDrawn = 0;
     while (leftContents != NULL && rightContents != NULL
@@ -868,7 +867,7 @@ void editorRefreshScreen() {
   abAppend(&ab, "\x1b[H", 3);
 
   editorDrawRows(&ab);
-  editorDrawStatusBar(&ab);
+  editorDrawStatusBar(&ab, editor.activePane->top, editor.activePane->left, editor.activePane->height, editor.activePane->width, editor.activePane->cursorX, editor.activePane->cursorY, editor.leftFile->cursorX, editor.leftFile->cursorY);
   editorDrawMessageBar(&ab);
   char buf[32];
   int paneOffsetX = editor.activePane == editor.leftPane
@@ -907,25 +906,18 @@ void editorMoveCursor(ZipperBuffer *buffer, int *cursorX, int *cursorY, int key)
   switch (key) {
   case ARROW_DOWN:
   case CTRL_KEY('n'):
-    if (*cursorY < editor.activePane->height - 1) {
-      *cursorY += 1;
-    }
-    editorForwardLine(buffer);
+    editorForwardLine(buffer, cursorY);
     break;
   case ARROW_UP:
   case CTRL_KEY('p'):
-    if (*cursorY > 0) {
-      *cursorY -= 1;
-    }
-    editorBackwardLine(buffer);
+    editorBackwardLine(buffer, cursorY);
     break;
   case ARROW_RIGHT:
   case CTRL_KEY('f'):
     if (row && *cursorX < row->size) {
       *cursorX += 1;
     } else if (row && *cursorX == row->size) {
-      *cursorY += 1;
-      editorForwardLine(buffer);
+      editorForwardLine(buffer, cursorY);
       *cursorX = 0;
     }
     break;
@@ -934,10 +926,7 @@ void editorMoveCursor(ZipperBuffer *buffer, int *cursorX, int *cursorY, int key)
     if (*cursorX > 0) {
       *cursorX -= 1;
     } else if (editorPreviousRow(buffer) != NULL) {
-      if (*cursorY > 0) {
-        *cursorY -= 1;
-      }
-      editorBackwardLine(buffer);
+      editorBackwardLine(buffer, cursorY);
       *cursorX = buffer->forwards->head->size;
     }
     break;

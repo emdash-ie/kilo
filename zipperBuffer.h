@@ -48,7 +48,7 @@ void zipperBackwardN(ZipperBuffer *buffer, int n);
 
 void zipperInsertRow(ZipperBuffer *buffer, EditorRow *new);
 
-RowList *zipperRowsFrom(ZipperBuffer *buffer, int n);
+RowList *zipperRowsFrom(ZipperBuffer *buffer, int cursorY, int n);
 
 void zipperUpdateNewest(ZipperBuffer *buffer);
 
