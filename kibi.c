@@ -18,6 +18,7 @@
 #include <fcntl.h>
 
 #include "editorRow.h"
+#include "fileData.h"
 #include "pane.h"
 #include "undo.h"
 #include "zipperBuffer.h"
@@ -42,38 +43,6 @@ enum EditorKey {
 };
 
 /*** data ***/
-
-typedef struct FileData {
-  int cursorX, cursorY;
-  int numberOfRows;
-  ZipperBuffer *buffer;
-  char *filename;
-  int unsavedChanges;
-  UndoStack *undo;
-  UndoStack *redo;
-} FileData;
-
-FileData *fileData(
-  int cursorX,
-  int cursorY,
-  int numberOfRows,
-  ZipperBuffer *buffer,
-  char *filename,
-  int unsavedChanges,
-  UndoStack *undo,
-  UndoStack *redo
-) {
-  FileData *fd = malloc(sizeof(FileData));
-  fd->cursorX = cursorX;
-  fd->cursorY = cursorY;
-  fd->numberOfRows = numberOfRows;
-  fd->buffer = buffer;
-  fd->filename = filename;
-  fd->unsavedChanges = unsavedChanges;
-  fd->undo = undo;
-  fd->redo = redo;
-  return fd;
-}
 
 typedef struct EditorConfig {
   FileData *leftFile;
@@ -223,57 +192,6 @@ int getWindowSize(int *rows, int *cols) {
 }
 
 /*** undo ***/
-
-void editorPushUndo(ZipperBuffer *buffer, UndoStack **undo, int cursorX, int cursorY) {
-  zipperUpdateNewest(buffer);
-  *undo = undoCons(
-    buffer->forwards,
-    buffer->backwards,
-    cursorX,
-    cursorY,
-    *undo
-  );
-}
-
-void editorPushRedo(ZipperBuffer *buffer, UndoStack **redo, int cursorX, int cursorY) {
-  *redo = undoCons(
-    buffer->forwards,
-    buffer->backwards,
-    cursorX,
-    cursorY,
-    *redo
-  );
-}
-
-void editorUndo(FileData *file) {
-  if (file->undo == NULL) {
-    editorSetStatusMessage("No further undo steps.");
-    return;
-  }
-  editorPushRedo(file->buffer, &file->redo, file->cursorX, file->cursorY);
-  UndoStack *oldUndo = file->undo;
-  file->buffer->forwards = oldUndo->forwards;
-  file->buffer->backwards = oldUndo->backwards;
-  file->cursorX = oldUndo->cursorX;
-  file->cursorY = oldUndo->cursorY;
-  file->undo = oldUndo->tail;
-  free(oldUndo);
-}
-
-void editorRedo(FileData *file) {
-  if (file->redo == NULL) {
-    editorSetStatusMessage("No further redo steps.");
-    return;
-  }
-  editorPushUndo(file->buffer, &file->undo, file->cursorX, file->cursorY);
-  UndoStack *oldRedo = file->redo;
-  file->buffer->forwards = oldRedo->forwards;
-  file->buffer->backwards = oldRedo->backwards;
-  file->cursorX = oldRedo->cursorX;
-  file->cursorY = oldRedo->cursorY;
-  file->redo = oldRedo->tail;
-  free(oldRedo);
-}
 
 void editorUndoSteps(UndoStack *undo) {
   int n = 0;
@@ -960,11 +878,12 @@ void editorProcessKeypress() {
       &fileData->unsavedChanges
     );
     break;
-  case CTRL_KEY('z'):
-    editorUndo(fileData);
+  case CTRL_KEY('z'): {
+    onFailure(editorUndo(fileData), editorSetStatusMessage);
     break;
+  }
   case CTRL_KEY('y'):
-    editorRedo(fileData);
+    onFailure(editorRedo(fileData), editorSetStatusMessage);
     break;
   case CTRL_KEY('x'):
     editorUndoSteps(fileData->undo);
