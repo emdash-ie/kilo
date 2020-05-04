@@ -17,6 +17,7 @@
 #include <stdarg.h>
 #include <fcntl.h>
 
+#include "display.h"
 #include "editorRow.h"
 #include "fileData.h"
 #include "pane.h"
@@ -45,11 +46,7 @@ enum EditorKey {
 /*** data ***/
 
 typedef struct EditorConfig {
-  FileData *leftFile;
-  FileData *rightFile;
-  Pane *leftPane;
-  Pane *rightPane;
-  Pane *activePane;
+  Display display;
   char statusMessage[80];
   time_t statusMessageTime;
   struct termios original_termios;
@@ -239,7 +236,7 @@ void editorInsertRowAfter(
   }
   editorForwardLine();
   editorInsertRow(s, length, false, buffer, numberOfRows, unsavedChanges, undo, cursorX, *cursorY);
-  if (*cursorY < editor.activePane->height - 1) {
+  if (*cursorY < activeHeight(&editor.display) - 1) {
     *cursorY = *cursorY + 1;
   }
 }
@@ -631,26 +628,26 @@ void abFree(struct abuf *ab) {
 
 /*** output ***/
 
-void editorScroll(Pane *pane, FileData *fileData) {
+void editorScroll(Pane *pane) {
   pane->cursorX = 0;
-  EditorRow *current = editorCurrentRow(fileData->buffer);
+  EditorRow *current = editorCurrentRow(pane->file->buffer);
   if (current != NULL) {
-    pane->cursorX = editorCursorToRender(current, fileData->cursorX, tabSize);
+    pane->cursorX = editorCursorToRender(current, pane->file->cursorX, tabSize);
   }
   if (pane->cursorX < pane->left) {
     pane->left = pane->cursorX;
   }
-  if (pane->cursorX >= pane->left + pane->width) {
-    pane->left = pane->cursorX - pane->width + 1;
+  if (pane->cursorX >= pane->left + activeWidth(&editor.display)) {
+    pane->left = pane->cursorX - activeWidth(&editor.display) + 1;
   }
-  pane->cursorY = fileData->cursorY - pane->top;
+  pane->cursorY = pane->file->cursorY - pane->top;
   if (pane->cursorY < 0) {
     pane->top += pane->cursorY;
   }
-  if (pane->cursorY >= pane->height) {
-    pane->top = fileData->cursorY - pane->height + 1;
+  if (pane->cursorY >= activeHeight(&editor.display)) {
+    pane->top = pane->file->cursorY - activeHeight(&editor.display) + 1;
   }
-  pane->cursorY = fileData->cursorY - pane->top;
+  pane->cursorY = pane->file->cursorY - pane->top;
 }
 
 void editorDrawString(struct abuf *ab, char *s, int length) {
@@ -683,18 +680,18 @@ void editorDrawEmpties(struct abuf *ab, int numberOfLines) {
 void editorDrawStatusBar(struct abuf *ab, int top, int left, int height, int width, int cursorX, int cursorY, int fileCursorX, int fileCursorY) {
   char status[80], rightStatus[80];
   int length = snprintf(status, sizeof(status), "\"%.20s\" - %d lines %s",
-                        editor.leftFile->filename
-                          ? editor.leftFile->filename
+                        activePane(&editor.display)->file->filename
+                        ? activePane(&editor.display)->file->filename
                           : "[No name]",
-                        editor.leftFile->numberOfRows,
-                        editor.leftFile->unsavedChanges ? "(modified)" : "");
+                        activePane(&editor.display)->file->numberOfRows,
+                        activePane(&editor.display)->file->unsavedChanges ? "(modified)" : "");
   int rightLength = snprintf(rightStatus, sizeof(rightStatus), "(%d,%d,%d,%d,%d,%d,%d,%d) %d/%d",
                              top, left, height, width, cursorX, cursorY, fileCursorX, fileCursorY,
-                             editor.activePane->cursorY + 1, editor.leftFile->numberOfRows);
-  if (length > editor.activePane->width) length = editor.activePane->width;
+                             activePane(&editor.display)->cursorY + 1, activePane(&editor.display)->file->numberOfRows);
+  if (length > editor.display.width) length = editor.display.width;
   abAppend(ab, status, length);
-  while (length < editor.activePane->width) {
-    if (editor.activePane->width - length == rightLength) {
+  while (length < editor.display.width) {
+    if (editor.display.width - length == rightLength) {
       abAppend(ab, rightStatus, rightLength);
       break;
     } else {
@@ -706,7 +703,7 @@ void editorDrawStatusBar(struct abuf *ab, int top, int left, int height, int wid
 }
 
 void editorDrawWelcome(struct abuf *ab) {
-  editorDrawEmpties(ab, editor.activePane->height / 3 - 1);
+  editorDrawEmpties(ab, editor.display.height / 3 - 1);
   char welcome[80];
   int welcomeLength = snprintf(
                                welcome,
@@ -714,10 +711,10 @@ void editorDrawWelcome(struct abuf *ab) {
                                "Kibi editor - version %s",
                                KIBI_VERSION
                                );
-  if (welcomeLength > editor.activePane->width) {
-    welcomeLength = editor.activePane->width;
+  if (welcomeLength > editor.display.width) {
+    welcomeLength = editor.display.width;
   }
-  int padding = (editor.activePane->width - welcomeLength) / 2;
+  int padding = (editor.display.width - welcomeLength) / 2;
   if (padding) {
     abAppend(ab, "~", 1);
     padding--;
@@ -726,32 +723,46 @@ void editorDrawWelcome(struct abuf *ab) {
   abAppend(ab, welcome, welcomeLength);
 }
 
+// TODO: loop logic is possibly incorrect. Should transpose structure as it's
+// built in drawDisplayColumn to make the looping easier
 void editorDrawRows(struct abuf *ab) {
-  if (editor.leftFile->numberOfRows == 0) {
+  if (activePane(&editor.display)->file->numberOfRows == 0) {
     editorDrawWelcome(ab);
   } else {
-    RowList *leftRows = zipperRowsFrom(editor.leftFile->buffer, editor.leftFile->cursorY, editor.leftPane->top);
-    PaneContents *leftContents = paneDraw(editor.leftPane, leftRows);
-    RowList *rightRows = zipperRowsFrom(editor.rightFile->buffer, editor.rightFile->cursorY, editor.rightPane->top);
-    PaneContents *rightContents = paneDraw(editor.rightPane, rightRows);
+    List(List(List(PaneRow))) *paneRows =
+      drawDisplayColumn(editor.display.panes, editor.display.height, editor.display.width);
+
     int linesDrawn = 0;
-    while (leftContents != NULL && rightContents != NULL
-           && linesDrawn < editor.activePane->height) {
-      editorDrawString(ab, leftContents->row, leftContents->width);
-      if (leftContents->width < editor.leftPane->width) {
-        editorDrawBlanks(ab, editor.leftPane->width - leftContents->width);
+    List(List(List(PaneRow))) *rows = paneRows;
+    while (rows != NULL && linesDrawn < editor.display.height) {
+      int charactersDrawn = 0;
+      List(List(PaneRow)) *panes = rows->head;
+      while (panes->head != NULL && linesDrawn < editor.display.height) {
+        List(List(PaneRow)) *panes2 = panes;
+        while (panes2 != NULL) {
+          List(PaneRow) *pane = panes2->head;
+          int proposedWidth = pane->head->width + pane->head->blanks;
+          int widthAvailable = editor.display.width - charactersDrawn;
+          int rowWidth = pane->head->width > widthAvailable ? widthAvailable : pane->head->width;
+          int totalWidth =
+              proposedWidth > widthAvailable ? widthAvailable : proposedWidth;
+          editorDrawString(ab, pane->head->row, rowWidth);
+          if (rowWidth < totalWidth) {
+            editorDrawBlanks(ab, totalWidth - rowWidth);
+          }
+          charactersDrawn += totalWidth;
+          // move pane pointer to next row
+          panes2->head = panes2->head->tail;
+          // move to next pane
+          panes2 = panes2->tail;
+        }
+        editorDrawNewline(ab);
+        linesDrawn++;
       }
-      editorDrawString(ab, rightContents->row, rightContents->width);
-      if (rightContents->width < editor.rightPane->width) {
-        editorDrawBlanks(ab, editor.rightPane->width - rightContents->width);
-      }
-      editorDrawNewline(ab);
-      leftContents = leftContents->tail;
-      rightContents = rightContents->tail;
-      linesDrawn++;
+      rows = rows->tail;
     }
-    if (linesDrawn < editor.activePane->height) {
-      editorDrawEmpties(ab, editor.activePane->height - linesDrawn);
+    if (linesDrawn < editor.display.height) {
+      editorDrawEmpties(ab, editor.display.height - linesDrawn);
     }
   }
 }
@@ -760,40 +771,32 @@ void editorDrawRows(struct abuf *ab) {
 void editorDrawMessageBar(struct abuf *ab) {
   abAppend(ab, "\x1b[K", 3);
   int messageLength = strlen(editor.statusMessage);
-  if (messageLength > editor.activePane->width) messageLength = editor.activePane->width;
+  if (messageLength > editor.display.width) messageLength = editor.display.width;
   if (messageLength && time(NULL) - editor.statusMessageTime < 5) {
     abAppend(ab, editor.statusMessage, messageLength);
   }
 }
 
 void editorUpdateWindowSize() {
-  if (getWindowSize(&editor.leftPane->height, &editor.leftPane->width) == -1)
+  if (getWindowSize(&editor.display.height, &editor.display.width) == -1)
     die("getWindowSize");
-  editor.leftPane->height -= 2;
-  editor.rightPane->height = editor.leftPane->height;
-  editor.rightPane->width = editor.leftPane->width / 2;
-  editor.leftPane->width = editor.leftPane->width / 2;
+  editor.display.height -= 2;
 }
 
 void editorRefreshScreen() {
   editorUpdateWindowSize();
-  editorScroll(editor.leftPane, editor.leftFile);
-  editorScroll(editor.rightPane, editor.rightFile);
+  editorScroll(activePane(&editor.display));
   struct abuf ab = ABUF_INIT;
 
   abAppend(&ab, "\x1b[?25l", 6);
   abAppend(&ab, "\x1b[H", 3);
 
   editorDrawRows(&ab);
-  editorDrawStatusBar(&ab, editor.activePane->top, editor.activePane->left, editor.activePane->height, editor.activePane->width, editor.activePane->cursorX, editor.activePane->cursorY, editor.leftFile->cursorX, editor.leftFile->cursorY);
+  editorDrawStatusBar(&ab, activePane(&editor.display)->top, activePane(&editor.display)->left, editor.display.height, editor.display.width, activePane(&editor.display)->cursorX, activePane(&editor.display)->cursorY, activePane(&editor.display)->file->cursorX, activePane(&editor.display)->file->cursorY);
   editorDrawMessageBar(&ab);
   char buf[32];
-  int paneOffsetX = editor.activePane == editor.leftPane
-    ? 0
-    : editor.leftPane->width;
-  int screenCursorX = paneOffsetX + editor.activePane->cursorX + 1;
-  int screenCursorY = editor.activePane->cursorY + 1;
-  snprintf(buf, sizeof(buf), "\x1b[%d;%dH", screenCursorY, screenCursorX);
+  ScreenCursor c = activeCursor(&editor.display);
+  snprintf(buf, sizeof(buf), "\x1b[%d;%dH", c.y, c.x);
   abAppend(&ab, buf, strlen(buf));
   abAppend(&ab, "\x1b[?25h", 6);
 
@@ -812,11 +815,7 @@ void editorSetStatusMessage(const char *format, ...) {
 /*** input ***/
 
 void editorSwitchPane() {
-  if (editor.activePane == editor.leftPane) {
-    editor.activePane = editor.rightPane;
-  } else {
-    editor.activePane = editor.leftPane;
-  }
+  // TODO
 }
 
 void editorMoveCursor(ZipperBuffer *buffer, int *cursorX, int *cursorY, int key) {
@@ -860,12 +859,7 @@ void editorMoveCursor(ZipperBuffer *buffer, int *cursorX, int *cursorY, int key)
 void editorProcessKeypress() {
   static int quitTimes = 1;
   int c = editorReadKey();
-  FileData *fileData;
-  if (editor.activePane == editor.leftPane) {
-    fileData = editor.leftFile;
-  } else {
-    fileData = editor.rightFile;
-  }
+  FileData *fileData = activePane(&editor.display)->file;
 
   switch (c) {
   case '\r':
@@ -942,14 +936,14 @@ void editorProcessKeypress() {
   case CTRL_KEY('d'):
     {
       if (c == PAGE_UP || c == CTRL_KEY('u')) {
-        fileData->cursorY = editor.activePane->top;
+        fileData->cursorY = activePane(&editor.display)->top;
       } else {
-        fileData->cursorY = editor.activePane->top + editor.activePane->height - 1;
+        fileData->cursorY = activePane(&editor.display)->top + activeHeight(&editor.display) - 1;
         if (fileData->cursorY > fileData->numberOfRows) {
           fileData->cursorY = fileData->numberOfRows;
         }
       }
-      int times = editor.activePane->height;
+      int times = activeHeight(&editor.display);
       while (times--) {
         editorMoveCursor(
           fileData->buffer,
@@ -996,24 +990,19 @@ void editorProcessKeypress() {
 /*** init ***/
 
 void initEditor() {
-  ZipperBuffer *leftBuffer = malloc(sizeof(ZipperBuffer));
-  leftBuffer->forwards = NULL;
-  leftBuffer->backwards = NULL;
-  leftBuffer->newest = NULL;
-  editor.leftFile = fileData(0, 0, 0, leftBuffer, NULL, 0, NULL, NULL);
-
-  ZipperBuffer *rightBuffer = malloc(sizeof(ZipperBuffer));
-  rightBuffer->forwards = NULL;
-  rightBuffer->backwards = NULL;
-  rightBuffer->newest = NULL;
-  editor.rightFile = fileData(0, 0, 0, rightBuffer, NULL, 0, NULL, NULL);
+  ZipperBuffer *emptyBuffer = malloc(sizeof(ZipperBuffer));
+  emptyBuffer->forwards = NULL;
+  emptyBuffer->backwards = NULL;
+  emptyBuffer->newest = NULL;
+  FileData *emptyFile = fileData(0, 0, 0, emptyBuffer, NULL, 0, NULL, NULL);
+  Pane *pane = makePane(0, 0, 0, 0, emptyFile);
+  DisplayRow *row = makeDisplayRow(NULL, pane, NULL);
+  DisplayColumn *column = makeDisplayColumn(NULL, row, NULL);
+  editor.display = (Display){column, 0, 0};
 
   editor.statusMessage[0] = '\0';
   editor.statusMessageTime = 0;
   editor.log = stderrLog;
-  editor.rightPane = makePane(0, 0, 0, 0, 0, 0);
-  editor.leftPane = makePane(0, 0, 0, 0, 0, 0);
-  editor.activePane = editor.leftPane;
 
   editorUpdateWindowSize();
 }
@@ -1030,23 +1019,13 @@ int main(int argc, char *argv[]) {
     }
     editorOpen(
       argv[1],
-      &editor.leftFile->filename,
-      editor.leftFile->buffer,
-      &editor.leftFile->undo,
-      &editor.leftFile->unsavedChanges,
-      &editor.leftFile->numberOfRows,
-      editor.leftFile->cursorX,
-      editor.rightFile->cursorY
-    );
-    editorOpen(
-      argv[2],
-      &editor.rightFile->filename,
-      editor.rightFile->buffer,
-      &editor.rightFile->undo,
-      &editor.rightFile->unsavedChanges,
-      &editor.rightFile->numberOfRows,
-      editor.rightFile->cursorX,
-      editor.rightFile->cursorY
+      &activePane(&editor.display)->file->filename,
+      activePane(&editor.display)->file->buffer,
+      &activePane(&editor.display)->file->undo,
+      &activePane(&editor.display)->file->unsavedChanges,
+      &activePane(&editor.display)->file->numberOfRows,
+      activePane(&editor.display)->file->cursorX,
+      activePane(&editor.display)->file->cursorY
     );
   }
 
