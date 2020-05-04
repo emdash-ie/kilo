@@ -1,5 +1,7 @@
 #pragma once
+#include "fileData.h"
 #include "zipperBuffer.h"
+#include "linkedList.h"
 
 /**
  * Rectangular area onscreen, with a cursor. Note that the cursor counts screen
@@ -18,18 +20,20 @@ typedef struct Pane {
   int cursorY;
   int top;
   int left;
-  int width;
-  int height;
+  FileData *file;
 } Pane;
 
-Pane *makePane(int cursorX, int cursorY, int top, int left, int width, int height);
+Pane *makePane(int cursorX, int cursorY, int top, int left, FileData *file);
 
-typedef struct PaneContents {
+typedef struct PaneRow {
   char *row;
   int width;
-  struct PaneContents *tail;
-} PaneContents;
+  /** The number of blanks needed to the right of the line. */
+  int blanks;
+} PaneRow;
 
-PaneContents *paneContentsCons(char *row, int width, PaneContents *tail);
+PaneRow *makePaneRow(char *row, int width, unsigned int blanks);
 
-PaneContents *paneDraw(Pane *p, RowList *rows);
+DeclareList(PaneRow);
+
+List(PaneRow) *paneDraw(Pane *p, int *height, int *width);

@@ -3,43 +3,46 @@
 #include "util.h"
 #include "zipperBuffer.h"
 
-PaneContents *paneContentsCons(char *row, int width, PaneContents *tail) {
-  PaneContents *contents = malloc(sizeof(PaneContents));
-  contents->row = row;
-  contents->width = width;
-  contents->tail = tail;
-  return contents;
-}
+DefineList(PaneRow);
 
-Pane *makePane(int cursorX, int cursorY, int top, int left, int width, int height) {
+Pane *makePane(int cursorX, int cursorY, int top, int left, FileData *file) {
   Pane *p = malloc(sizeof(Pane));
   p->cursorX = cursorX;
   p->cursorY = cursorY;
   p->top = top;
   p->left = left;
-  p->width = width;
-  p->height = height;
+  p->file = file;
   return p;
 }
 
-PaneContents *drawRow(int left, int width, EditorRow *r) {
+List(PaneRow) *drawRow(int left, int width, EditorRow *r) {
   int x = clip(left, 0, r->renderSize);
   int resultWidth = clip(r->renderSize - x, 0, width);
-  return paneContentsCons(r->renderChars + x, resultWidth, NULL);
+  unsigned int blanks = width - resultWidth;
+  return ListF(PaneRow).cons(makePaneRow(r->renderChars + x, resultWidth, blanks), NULL);
 }
 
-PaneContents *drawPane(int height, int left, int width, RowList *rows) {
+List(PaneRow) *drawPane(int height, int left, int width, RowList *rows) {
   if (rows == NULL || height <= 0) {
     return NULL;
   }
-  PaneContents *head = drawRow(left, width, rows->head);
-  PaneContents *tail = drawPane(height - 1, left, width, rows->tail);
+  List(PaneRow) *head = drawRow(left, width, rows->head);
+  List(PaneRow) *tail = drawPane(height - 1, left, width, rows->tail);
   head->tail = tail;
   return head;
 }
 
-PaneContents *paneDraw(Pane *p, RowList *rows) {
-  return drawPane(p->height, p->left, p->width, rows);
+List(PaneRow) *paneDraw(Pane *p, int *height, int *width) {
+  RowList *rows = zipperRowsFrom(p->file->buffer, p->file->cursorY, p->top);
+  return drawPane(*height, p->left, *width, rows);
+}
+
+PaneRow *makePaneRow(char *row, int width, unsigned int blanks) {
+  PaneRow *r = malloc(sizeof(PaneRow));
+  r->row = row;
+  r->width = width;
+  r->blanks = blanks;
+  return r;
 }
 
 /*
