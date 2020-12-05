@@ -1,0 +1,10 @@
+#+TITLE: Readme
+
+This is a minimal text editor, created by following [[https://viewsourcecode.org/snaptoken/kilo/][the snaptoken kilo tutorial]]
+and then making some tweaks (partly so I can make things more like Haskell). The
+main thing I’m having fun playing around with is using macros to make generic
+datastructures and functions (e.g. linked lists and functions like ~zipWith~).
+
+There are definitely some memory leaks, because I haven’t tried very hard to
+avoid them (and mapping over linked lists without garbage collection makes
+them much more likely) – I may fix them at some point.
