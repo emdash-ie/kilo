@@ -723,8 +723,6 @@ void editorDrawWelcome(struct abuf *ab) {
   abAppend(ab, welcome, welcomeLength);
 }
 
-// TODO: loop logic is possibly incorrect. Should transpose structure as it's
-// built in drawDisplayColumn to make the looping easier
 void editorDrawRows(struct abuf *ab) {
   if (activePane(&editor.display)->file->numberOfRows == 0) {
     editorDrawWelcome(ab);
@@ -734,11 +732,14 @@ void editorDrawRows(struct abuf *ab) {
 
     int linesDrawn = 0;
     List(List(List(PaneRow))) *rows = paneRows;
+    // for each column
     while (rows != NULL && linesDrawn < editor.display.height) {
-      int charactersDrawn = 0;
       List(List(PaneRow)) *panes = rows->head;
+      // for each row in the column
       while (panes->head != NULL && linesDrawn < editor.display.height) {
+        int charactersDrawn = 0;
         List(List(PaneRow)) *panes2 = panes;
+        // for each pane in the row, print the current line
         while (panes2 != NULL) {
           List(PaneRow) *pane = panes2->head;
           int proposedWidth = pane->head->width + pane->head->blanks;
