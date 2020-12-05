@@ -3,7 +3,7 @@
 #include "util.h"
 #include "zipperBuffer.h"
 
-DefineList(PaneRow);
+DefineList(PaneRow)
 
 Pane *makePane(int cursorX, int cursorY, int top, int left, FileData *file) {
   Pane *p = malloc(sizeof(Pane));

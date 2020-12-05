@@ -34,6 +34,6 @@ typedef struct PaneRow {
 
 PaneRow *makePaneRow(char *row, int width, unsigned int blanks);
 
-DeclareList(PaneRow);
+DeclareList(PaneRow)
 
 List(PaneRow) *paneDraw(Pane *p, int *height, int *width);
