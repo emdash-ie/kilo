@@ -18,14 +18,14 @@ typedef struct ScreenCursor {
   int y;
 } ScreenCursor;
 
-DeclareList(DisplayRow);
-DeclareList(Pane);
-DeclareList(List(PaneRow));
-DeclareList(List(List(PaneRow)));
-DeclareList(int);
-DeclareListFunctions2(Pane, List(PaneRow));
-DeclareListFunctions4(Pane, int, int, List(PaneRow));
-DeclareListFunctions4(DisplayRow, int, int, List(List(PaneRow)));
+DeclareList(DisplayRow)
+DeclareList(Pane)
+DeclareList(List(PaneRow))
+DeclareList(List(List(PaneRow)))
+DeclareList(int)
+DeclareListFunctions2(Pane, List(PaneRow))
+DeclareListFunctions4(Pane, int, int, List(PaneRow))
+DeclareListFunctions4(DisplayRow, int, int, List(List(PaneRow)))
 int paneListSize(List(Pane) * ps);
 int columnListSize(List(DisplayRow) * ps);
 int displayColumnSize(DisplayColumn *row);
