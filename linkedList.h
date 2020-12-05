@@ -89,14 +89,18 @@
     }                                                                          \
   }
 
-#define DefineListFunctionStruct(a)                                            \
+#define DeclareListFunctionStruct(a) \
   typedef struct ListFT(a) {                                                   \
     List(a) * (*cons)(a *, List(a) *);                                         \
     int (*length)(List(a) *);                                                  \
     List(a) * (*reverse)(List(a) *);                                           \
     List(a) * (*concat)(List(a) *, List(a) *);                                 \
   } ListFT(a);                                                                 \
-  ;                                                                            \
+  extern ListFT(a) ListF(a);
+
+#define DefineListFunctionStruct(a) _DefineListFunctionStruct(a)
+#define _DefineListFunctionStruct(a)                                            \
+  DeclareListFunctionStruct(a) \
   ListFT(a) ListF(a) = {listCons__##a, listLength__##a, listReverse__##a,      \
                         listConcat__##a};
 
