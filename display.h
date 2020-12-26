@@ -7,6 +7,15 @@ typedef struct DisplayRow DisplayRow;
 typedef struct DisplayColumn DisplayColumn;
 typedef struct Display Display;
 
+DeclareList(DisplayRow)
+DeclareList(Pane)
+DeclareList(List(PaneRow))
+DeclareList(List(List(PaneRow)))
+DeclareList(int)
+DeclareListFunctions2(Pane, List(PaneRow))
+DeclareListFunctions4(Pane, int, int, List(PaneRow))
+DeclareListFunctions4(DisplayRow, int, int, List(List(PaneRow)))
+
 struct Display {
   DisplayColumn *panes;
   int height;
@@ -18,14 +27,18 @@ typedef struct ScreenCursor {
   int y;
 } ScreenCursor;
 
-DeclareList(DisplayRow)
-DeclareList(Pane)
-DeclareList(List(PaneRow))
-DeclareList(List(List(PaneRow)))
-DeclareList(int)
-DeclareListFunctions2(Pane, List(PaneRow))
-DeclareListFunctions4(Pane, int, int, List(PaneRow))
-DeclareListFunctions4(DisplayRow, int, int, List(List(PaneRow)))
+struct DisplayColumn {
+  List(DisplayRow) *up;
+  DisplayRow *active;
+  List(DisplayRow) *down;
+};
+
+struct DisplayRow {
+  List(Pane) *left;
+  Pane *active;
+  List(Pane) *right;
+};
+
 int paneListSize(List(Pane) * ps);
 int columnListSize(List(DisplayRow) * ps);
 int displayColumnSize(DisplayColumn *row);
