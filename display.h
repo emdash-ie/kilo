@@ -1,20 +1,18 @@
 #pragma once
 
-#include "linkedList.h"
+#include "lists/DisplayRow-int-int-ListListPaneRow.h"
+#include "lists/DisplayRow.h"
+#include "lists/ListListPaneRow.h"
+#include "lists/ListPaneRow.h"
+#include "lists/Pane-ListPaneRow.h"
+#include "lists/Pane-int-int-ListPaneRow.h"
+#include "lists/Pane.h"
+#include "lists/int.h"
 #include "pane.h"
 
 typedef struct DisplayRow DisplayRow;
 typedef struct DisplayColumn DisplayColumn;
 typedef struct Display Display;
-
-DeclareList(DisplayRow)
-DeclareList(Pane)
-DeclareList(List(PaneRow))
-DeclareList(List(List(PaneRow)))
-DeclareList(int)
-DeclareListFunctions2(Pane, List(PaneRow))
-DeclareListFunctions4(Pane, int, int, List(PaneRow))
-DeclareListFunctions4(DisplayRow, int, int, List(List(PaneRow)))
 
 struct Display {
   DisplayColumn *panes;

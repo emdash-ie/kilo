@@ -1,15 +1,4 @@
 #include "display.h"
-#include "pane.h"
-#include "linkedList.h"
-
-DefineList(DisplayRow)
-DefineList(Pane)
-DefineList(List(PaneRow))
-DefineList(List(List(PaneRow)))
-DefineList(int)
-DefineListFunctions2(Pane, List(PaneRow))
-DefineListFunctions4(Pane, int, int, List(PaneRow))
-DefineListFunctions4(DisplayRow, int, int, List(List(PaneRow)))
 
 DisplayColumn *makeDisplayColumn(
   List(DisplayRow) *u, DisplayRow *a, List(DisplayRow) *d

@@ -1,7 +1,7 @@
 #pragma once
 #include "fileData.h"
+#include "lists/PaneRow.h"
 #include "zipperBuffer.h"
-#include "linkedList.h"
 
 /**
  * Rectangular area onscreen, with a cursor. Note that the cursor counts screen
@@ -32,6 +32,5 @@ typedef struct PaneRow {
 
 PaneRow *makePaneRow(char *row, int width, unsigned int blanks);
 
-DeclareList(PaneRow)
 
 List(PaneRow) *paneDraw(Pane *p, int *height, int *width);

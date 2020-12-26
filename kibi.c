@@ -24,7 +24,7 @@
 #include "undo.h"
 #include "zipperBuffer.h"
 
-DeclareListFunctionStruct(DisplayRow)
+#include "lists/DisplayRow.h"
 
 /*** defines ***/
 

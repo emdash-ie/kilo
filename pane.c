@@ -1,9 +1,8 @@
 #include "editorRow.h"
+#include "lists/PaneRow.h"
 #include "pane.h"
 #include "util.h"
 #include "zipperBuffer.h"
-
-DefineList(PaneRow)
 
 Pane *makePane(int cursorX, int cursorY, int top, int left, FileData *file) {
   Pane *p = malloc(sizeof(Pane));
