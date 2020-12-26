@@ -24,6 +24,8 @@
 #include "undo.h"
 #include "zipperBuffer.h"
 
+DeclareListFunctionStruct(DisplayRow)
+
 /*** defines ***/
 
 #define CTRL_KEY(k) ((k) & 0x1f)
@@ -628,6 +630,23 @@ void abFree(struct abuf *ab) {
 
 /*** output ***/
 
+/**
+ * Split the current pane in two, with the new (non-focused) split below the
+ * current one.
+ */
+void splitBelow(Display *display) {
+  int upperHeight = display->height / 2;
+  int lowerHeight = display->height - upperHeight;
+  int x = display->panes->active->active->cursorX;
+  int y = display->panes->active->active->cursorY;
+  int top = display->panes->active->active->top;
+  int left = display->panes->active->active->left;
+  FileData *file = display->panes->active->active->file;
+  Pane *newPane = makePane(x, y, top, left, file);
+  DisplayRow *newRow = makeDisplayRow(NULL, newPane, NULL);
+  display->panes->down = ListF(DisplayRow).cons(newRow, display->panes->down);
+}
+
 void editorScroll(Pane *pane) {
   pane->cursorX = 0;
   EditorRow *current = editorCurrentRow(pane->file->buffer);
@@ -1011,7 +1030,7 @@ void initEditor() {
 int main(int argc, char *argv[]) {
   enableRawMode();
   initEditor();
-  if (argc >= 3) {
+  if (argc >= 2) {
     if (argc >= 4) {
       editor.log = fileLog;
       editor.logFile = fopen(argv[3], "w");
@@ -1028,6 +1047,7 @@ int main(int argc, char *argv[]) {
       activePane(&editor.display)->file->cursorX,
       activePane(&editor.display)->file->cursorY
     );
+    splitBelow(&editor.display);
   }
 
   editorSetStatusMessage("Ctrl-q to quit, Ctrl-s to save");

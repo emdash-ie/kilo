@@ -11,12 +11,6 @@ DefineListFunctions2(Pane, List(PaneRow))
 DefineListFunctions4(Pane, int, int, List(PaneRow))
 DefineListFunctions4(DisplayRow, int, int, List(List(PaneRow)))
 
-struct DisplayColumn {
-  List(DisplayRow) *up;
-  DisplayRow *active;
-  List(DisplayRow) *down;
-};
-
 DisplayColumn *makeDisplayColumn(
   List(DisplayRow) *u, DisplayRow *a, List(DisplayRow) *d
 ) {
@@ -26,12 +20,6 @@ DisplayColumn *makeDisplayColumn(
   column->down = d;
   return column;
 }
-
-struct DisplayRow {
-  List(Pane) *left;
-  Pane *active;
-  List(Pane) *right;
-};
 
 DisplayRow *makeDisplayRow(List(Pane) *l, Pane *a, List(Pane) *r) {
   DisplayRow *row = malloc(sizeof(DisplayRow));

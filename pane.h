@@ -12,8 +12,6 @@
  * top: top of pane starts this many lines from the top of the buffer
  * left: left of pane starts this many characters from the left of the
  *   buffer
- * width: width of the pane in characters
- * height: height of the pane in lines
  */
 typedef struct Pane {
   int cursorX;
