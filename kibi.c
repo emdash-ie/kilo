@@ -784,6 +784,7 @@ void editorDrawRows(struct abuf *ab) {
     if (linesDrawn < editor.display.height) {
       editorDrawEmpties(ab, editor.display.height - linesDrawn);
     }
+    ListF(List(List(PaneRow))).free(paneRows);
   }
 }
 

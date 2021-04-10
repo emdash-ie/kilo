@@ -54,11 +54,21 @@ List(List(List(PaneRow))) *drawDisplayColumn(DisplayColumn *column, int height, 
   *eachWidth = width;
   List(int) *widths = ListF(int).cons(eachWidth, NULL);
   widths->tail = widths;
+  List(DisplayRow) *top = ListF(DisplayRow).reverse(column->up);
   List(DisplayRow) *rows = ListF(DisplayRow).concat(
-    ListF(DisplayRow).reverse(column->up),
+    top,
     ListF(DisplayRow).cons(column->active, column->down));
-  return ListF4(DisplayRow, int, int, List(List(PaneRow)))
+  List(List(List(PaneRow))) *result = ListF4(DisplayRow, int, int, List(List(PaneRow)))
     .zipWith(drawDisplayRow, rows, heights, widths);
+
+  free(heights->tail);
+  free(heights);
+  free(widths);
+  free(eachHeight);
+  free(firstHeight);
+  free(eachWidth);
+
+  return result;
 }
 
 List(List(PaneRow)) *drawDisplayRow(DisplayRow *row, int *height, int *width) {
@@ -72,8 +82,15 @@ List(List(PaneRow)) *drawDisplayRow(DisplayRow *row, int *height, int *width) {
   widths->tail = widths;
   List(int) *heights = ListF(int).cons(height, NULL);
   heights->tail = heights;
-  return ListF4(Pane, int, int, List(PaneRow))
+  List(List(PaneRow)) *result =
+    ListF4(Pane, int, int, List(PaneRow))
     .zipWith(paneDraw, panes, heights, widths);
+
+  free(heights);
+  free(widths);
+  free(eachWidth);
+
+  return result;
 }
 
 int displayColumnSize(DisplayColumn *column) {

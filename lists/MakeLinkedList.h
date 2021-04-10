@@ -37,11 +37,17 @@ List(a) *ListReverseName(a)(List(a) *list);
 
 List(a) *ListConcatName(a)(List(a) *first, List(a) *second);
 
+#define _ListFreeName(a) listFree__ ## a
+#define ListFreeName(a) _ListFreeName(a)
+
+void ListFreeName(a)(List(a) *as);
+
 typedef struct ListFT(a) {
     List(a) * (*cons)(a *, List(a) *);
     int (*length)(List(a) *);
     List(a) * (*reverse)(List(a) *);
     List(a) * (*concat)(List(a) *, List(a) *);
+    void (*free)(List(a) *);
 } ListFT(a);
 
 extern ListFT(a) ListF(a);
@@ -80,11 +86,20 @@ List(a) *ListConcatName(a)(List(a) *first, List(a) *second) {
     }
 }
 
+void ListFreeName(a)(List(a) *as) {
+    if (as != NULL) {
+        List(a) *next = as->tail;
+        free(as);
+        ListFreeName(a)(next);
+    }
+}
+
 ListFT(a) ListF(a) = {
     ListConsName(a),
     ListLengthName(a),
     ListReverseName(a),
-    ListConcatName(a)
+    ListConcatName(a),
+    ListFreeName(a)
 };
 
 #endif // LinkedListImplementation
