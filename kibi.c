@@ -772,19 +772,25 @@ void editorDrawRows(struct abuf *ab) {
           }
           charactersDrawn += totalWidth;
           // move pane pointer to next row
+          List(PaneRow) *current = panes2->head;
           panes2->head = panes2->head->tail;
+          // that row (cons cell) is no longer needed
+          free(current);
           // move to next pane
           panes2 = panes2->tail;
         }
         editorDrawNewline(ab);
         linesDrawn++;
       }
+      // we've done all the panes in this row
+      ListF(List(PaneRow)).free(panes);
+      List(List(List(PaneRow))) *finishedRow = rows;
       rows = rows->tail;
+      free(finishedRow);
     }
     if (linesDrawn < editor.display.height) {
       editorDrawEmpties(ab, editor.display.height - linesDrawn);
     }
-    ListF(List(List(PaneRow))).free(paneRows);
   }
 }
 

@@ -67,6 +67,8 @@ List(List(List(PaneRow))) *drawDisplayColumn(DisplayColumn *column, int height, 
   free(eachHeight);
   free(firstHeight);
   free(eachWidth);
+  ListF(DisplayRow).free(top);
+  ListF(DisplayRow).freeUntil(rows, column->down);
 
   return result;
 }
@@ -89,6 +91,8 @@ List(List(PaneRow)) *drawDisplayRow(DisplayRow *row, int *height, int *width) {
   free(heights);
   free(widths);
   free(eachWidth);
+  ListF(Pane).free(above);
+  ListF(Pane).freeUntil(panes, row->right);
 
   return result;
 }
