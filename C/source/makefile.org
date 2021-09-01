@@ -1,6 +1,11 @@
+#+Title: Makefile
+
+The makefile showing how to compile the project.
+
+#+begin_src Makefile :tangle ../tangled/Makefile :mkdirp yes
 CFLAGS = -Wall -Wextra -pedantic -std=c17
 
-common-objects = pane.o registers.o undo.o zipperBuffer.o editorRow.o \
+common-objects = pane.o undo.o zipperBuffer.o editorRow.o \
           util.o fileData.o display.o $(patsubst %.c,%.o,$(wildcard lists/*.c))
 
 test-objects = $(patsubst %.c,%.o,$(wildcard test/*.c)) $(common-objects)
@@ -22,3 +27,4 @@ display.o: display.c pane.h
 .PHONY : clean
 clean :
 	rm kibi $(objects)
+#+end_src

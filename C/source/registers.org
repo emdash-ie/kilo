@@ -1,0 +1,14 @@
+#+Title Registers
+
+This /will/ be an implementation of registers (for copying into and pasting from).
+
+#+begin_src C
+#pragma once
+
+typedef struct Register Register;
+
+struct Register {
+  char *content;
+  Register *previous;
+};
+#+end_src

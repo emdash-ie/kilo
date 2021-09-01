@@ -1,3 +1,8 @@
+#+Title: Tuple
+
+A tuple type, generic over the two contained types.
+
+#+begin_src C :tangle ../tangled/tuple.h
 #pragma once
 
 #include <stdlib.h>
@@ -13,3 +18,4 @@
     a *fst; \
     b *snd; \
   } Tuple(a, b);
+#+end_src

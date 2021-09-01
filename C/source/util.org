@@ -1,0 +1,21 @@
+#+Title: Util
+
+Utility functions!
+
+* Header
+  #+begin_src C :tangle ../tangled/util.h :mkdirp yes
+    #pragma once
+    int clip(int x, int min, int max);
+  #+end_src
+* Body
+  #+begin_src C :tangle ../tangled/util.c :mkdirp yes
+    int clip(int x, int min, int max) {
+      if (x <= min) {
+        return min;
+      } else if (x >= max) {
+        return max;
+      } else {
+        return x;
+      }
+    }
+  #+end_src
