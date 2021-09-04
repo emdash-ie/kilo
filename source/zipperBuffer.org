@@ -1,10 +1,33 @@
 #+Title: ZipperBuffer
 
 A representation of buffers (in-memory data from files) as a zipper (two linked
-lists, one lines forward and one lines backward).
+lists, one holding the line the cursor is on and the lines after it, and one
+holding the lines before it in reverse order).
+
+The idea behind using a zipper like this was that it would enable scrolling
+easily (by unconsing off one list and consing onto the other), but still be a
+persistent data structure so that an undo functionality could be implemented by
+holding on to old copies of the zipper.
+
+* RowList
+
+  A ~RowList~ is a linked list of ~EditorRows~, which also stores an ID number.
+  The ID is used to keep track of which row lists we can free and which we need
+  to keep to keep the undo history intact.
+
+  #+name: rowlist-type
+  #+begin_src C
+    typedef struct RowList RowList;
+
+    struct RowList {
+      EditorRow *head;
+      RowList *tail;
+      int number;
+    };
+  #+end_src
 
 * Header
-  #+begin_src C :tangle ../tangled/zipperBuffer.h :mkdirp yes
+  #+begin_src C :tangle ../tangled/zipperBuffer.h :mkdirp yes :noweb yes
     #ifndef ZIPPER_BUFFER
     #define ZIPPER_BUFFER
 
@@ -13,28 +36,22 @@ lists, one lines forward and one lines backward).
     #include <stdio.h>
     #include "editorRow.h"
 
-    typedef struct RowList RowList;
-
-    struct RowList {
-      EditorRow *head;
-      RowList *tail;
-      int number;
-    };
-
+    <<rowlist-type>>
+    
     RowList *rowListCons(EditorRow *head, RowList *tail);
 
     RowList *rowListDrop(RowList *list, int n);
 
     /**
-     * True if x is newer than y, false otherwise.
-     */
+     ,* True if x is newer than y, false otherwise.
+     ,*/
     bool rowListNewer(RowList *x, RowList *y);
 
     void updateRowList(RowList *toUpdate, EditorRow *newHead, RowList *newTail);
 
     /**
-     * Reverses a RowList by mutating it. Returns the new head.
-     */
+     ,* Reverses a RowList by mutating it. Returns the new head.
+     ,*/
     RowList *rowListReverse(RowList *rows);
 
     typedef struct ZipperBuffer ZipperBuffer;

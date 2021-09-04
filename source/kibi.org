@@ -5,6 +5,10 @@ then making some tweaks (partly so I can make things more like Haskell). The
 main thing I’m having fun playing around with is using macros to make generic
 datastructures and functions (e.g. linked lists and functions like ~zipWith~).
 
+This file depends on some other files:
+
+- [[zipperBuffer.org]]
+
 #+begin_src C :tangle ../tangled/kibi.c :mkdirp yes
   /*** includes ***/
 
