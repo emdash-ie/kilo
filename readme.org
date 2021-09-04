@@ -1,0 +1,6 @@
+#+TITLE: Readme
+
+* Repository structure
+
+This project is written as a literate program using org-mode. [[file:source/kibi.org][source/kibi.org]] is a
+good place to start.
