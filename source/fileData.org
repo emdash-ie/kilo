@@ -122,7 +122,7 @@ Code for managing files.
       int cursorX,
       int cursorY
     ) {
-      ,*redo = undoCons(buffer->forwards, buffer->backwards, cursorX, cursorY, *redo);
+      *redo = undoCons(buffer->forwards, buffer->backwards, cursorX, cursorY, *redo);
     }
 
     void editorPushUndo(
@@ -132,7 +132,7 @@ Code for managing files.
       int cursorY
     ) {
       zipperUpdateNewest(buffer);
-      ,*undo = undoCons(buffer->forwards, buffer->backwards, cursorX, cursorY, *undo);
+      *undo = undoCons(buffer->forwards, buffer->backwards, cursorX, cursorY, *undo);
     }
 
     OperationResult *editorUndo(FileData *file) {

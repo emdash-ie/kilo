@@ -108,14 +108,14 @@ Code for managing a number of panes and drawing them to the screen.
     List(List(List(PaneRow))) *drawDisplayColumn(DisplayColumn *column, int height, int width) {
       int n = displayColumnSize(column);
       int *eachHeight = malloc(sizeof(int));
-      ,*eachHeight = height / n;
+      *eachHeight = height / n;
       int *firstHeight = malloc(sizeof(int));
-      ,*firstHeight = height - ((n - 1) * *eachHeight);
+      *firstHeight = height - ((n - 1) * *eachHeight);
       List(int) *heights =
         ListF(int).cons(firstHeight, ListF(int).cons(eachHeight, NULL));
       heights->tail->tail = heights->tail;
       int *eachWidth = malloc(sizeof(int));
-      ,*eachWidth = width;
+      *eachWidth = width;
       List(int) *widths = ListF(int).cons(eachWidth, NULL);
       widths->tail = widths;
       List(DisplayRow) *top = ListF(DisplayRow).reverse(column->up);
@@ -144,7 +144,7 @@ Code for managing a number of panes and drawing them to the screen.
         ListF(Pane).concat(above, ListF(Pane).cons(row->active, row->right));
       int n = ListF(Pane).length(panes);
       int *eachWidth = malloc(sizeof(int));
-      ,*eachWidth = *width / n;
+      *eachWidth = *width / n;
       List(int) *widths = ListF(int).cons(eachWidth, NULL);
       widths->tail = widths;
       List(int) *heights = ListF(int).cons(height, NULL);

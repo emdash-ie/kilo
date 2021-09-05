@@ -43,15 +43,15 @@ holding on to old copies of the zipper.
     RowList *rowListDrop(RowList *list, int n);
 
     /**
-     ,* True if x is newer than y, false otherwise.
-     ,*/
+     * True if x is newer than y, false otherwise.
+     */
     bool rowListNewer(RowList *x, RowList *y);
 
     void updateRowList(RowList *toUpdate, EditorRow *newHead, RowList *newTail);
 
     /**
-     ,* Reverses a RowList by mutating it. Returns the new head.
-     ,*/
+     * Reverses a RowList by mutating it. Returns the new head.
+     */
     RowList *rowListReverse(RowList *rows);
 
     typedef struct ZipperBuffer ZipperBuffer;
@@ -113,8 +113,8 @@ holding on to old copies of the zipper.
   }
 
   /**
-   ,* True if x is newer than y, false otherwise.
-   ,*/
+   * True if x is newer than y, false otherwise.
+   */
   bool rowListNewer(RowList *x, RowList *y) {
     if (y == NULL) {
       return true;
@@ -133,8 +133,8 @@ holding on to old copies of the zipper.
   }
 
   /**
-   ,* Reverses a RowList in-place. Returns the new head.
-   ,*/
+   * Reverses a RowList in-place. Returns the new head.
+   */
   RowList *rowListReverse(RowList *rows) {
     RowList *last = NULL;
     RowList *next = NULL;
