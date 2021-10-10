@@ -129,8 +129,70 @@ can be freed:
   }
 #+end_src
 
+#+name: zipperForwardN-definition
+#+begin_src C
+  void zipperForwardN(ZipperBuffer *buffer, int n) {
+    for (;n > 0; n--) {
+      zipperForwardRow(buffer);
+    }
+  }
+#+end_src
+
+#+name: zipperBackwardN-definition
+#+begin_src C
+  void zipperBackwardN(ZipperBuffer *buffer, int n) {
+    for (;n > 0; n--) {
+      zipperBackwardRow(buffer);
+    }
+  }
+#+end_src
+
+Inserting content is straightforward: create a cons cell with the new row and the current ~forward~ list, update the buffer’s ~forwards~ pointer, and update ~newest~.
+
+#+name: zipperInsertRow-definition
+#+begin_src C
+  void zipperInsertRow(ZipperBuffer *buffer, EditorRow *r) {
+    RowList *oldForwards = buffer->forwards;
+    RowList *newForwards = rowListCons(r, oldForwards);
+    buffer->forwards = newForwards;
+    buffer->newest = newForwards;
+  }
+#+end_src
+
+In order to display content on the screen, it’s helpful to get the lines from a certain point (e.g. the top of the screen). If the index is at or in front of the cursor, just drop ~index~ rows. Otherwise, scroll backwards until it is (remembering to update ~newest~ – now that these lines are being used by other code, they can’t be freed on scroll), and then scroll forward again.
+
+#+name: zipperRowsFrom-definitions
+#+begin_src C
+  RowList *zipperRowsFromRelative(ZipperBuffer *buffer, int n) {
+    if (n >= 0) {
+      return rowListDrop(buffer->forwards, n);
+    } else {
+      zipperBackwardN(buffer, -n);
+      RowList *rows = buffer->forwards;
+      zipperUpdateNewest(buffer);
+      zipperForwardN(buffer, -n);
+      return rows;
+    }
+  }
+
+  RowList *zipperRowsFrom(ZipperBuffer *buffer, int cursorY, int n) {
+    return zipperRowsFromRelative(buffer, n - cursorY);
+  }
+#+end_src
+
+#+name: rowListDrop-definition
+#+begin_src C
+  RowList *rowListDrop(RowList *list, int n) {
+    if (n <= 0) {
+      return list;
+    } else {
+      return rowListDrop(list->tail, n - 1);
+    }
+  }
+#+end_src
+
 * Header
-  #+begin_src C :tangle ../tangled/zipperBuffer.h :mkdirp yes :noweb yes
+  #+begin_src C :tangle ../tangled/zipperBuffer.h :mkdirp yes :noweb yes :main no
     #ifndef ZIPPER_BUFFER
     #define ZIPPER_BUFFER
 
@@ -184,20 +246,14 @@ can be freed:
     #endif
   #+end_src
 * Body
-  #+begin_src C :tangle ../tangled/zipperBuffer.c :mkdirp yes :noweb yes
+  #+begin_src C :tangle ../tangled/zipperBuffer.c :mkdirp yes :noweb yes :main no
     #include <stdlib.h>
     #include <stdbool.h>
     #include <stdio.h>
     #include "editorRow.h"
     #include "zipperBuffer.h"
 
-    RowList *rowListDrop(RowList *list, int n) {
-      if (n <= 0) {
-        return list;
-      } else {
-        return rowListDrop(list->tail, n - 1);
-      }
-    }
+    <<rowListDrop-definition>>
 
     <<rowListCons-definition>>
 
@@ -227,42 +283,15 @@ can be freed:
 
     <<zipperForwardRow-definition>>
 
-    void zipperForwardN(ZipperBuffer *buffer, int n) {
-      for (;n > 0; n--) {
-        zipperForwardRow(buffer);
-      }
-    }
+    <<zipperForwardN-definition>>
 
     <<zipperBackwardRow-definition>>
 
-    void zipperBackwardN(ZipperBuffer *buffer, int n) {
-      for (;n > 0; n--) {
-        zipperBackwardRow(buffer);
-      }
-    }
+    <<zipperBackwardN-definition>>
 
-    void zipperInsertRow(ZipperBuffer *buffer, EditorRow *r) {
-      RowList *oldForwards = buffer->forwards;
-      RowList *newForwards = rowListCons(r, oldForwards);
-      buffer->forwards = newForwards;
-      buffer->newest = newForwards;
-    }
+    <<zipperInsertRow-definition>>
 
-    RowList *zipperRowsFromRelative(ZipperBuffer *buffer, int n) {
-      if (n >= 0) {
-        return rowListDrop(buffer->forwards, n);
-      } else {
-        zipperBackwardN(buffer, -n);
-        RowList *rows = buffer->forwards;
-        zipperUpdateNewest(buffer);
-        zipperForwardN(buffer, -n);
-        return rows;
-      }
-    }
-
-    RowList *zipperRowsFrom(ZipperBuffer *buffer, int cursorY, int n) {
-      return zipperRowsFromRelative(buffer, n - cursorY);
-    }
+    <<zipperRowsFrom-definitions>>
 
     <<zipperUpdateNewest-definition>>
 
