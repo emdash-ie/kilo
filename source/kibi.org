@@ -1,5 +1,51 @@
 #+TITLE: Kibi
 
+* The Main Loop
+
+The editor runs a single process, which runs in a loop, alternately refreshing
+the screen and processing user input, blocking until the input is available.
+
+#+name: main-loop
+#+begin_src C
+  editorRefreshScreen();
+  editorProcessKeypress();
+#+end_src
+
+#+name: main
+#+begin_src C
+  enableRawMode();
+  initEditor();
+  if (argc >= 2) {
+    if (argc >= 4) {
+      editor.log = fileLog;
+      editor.logFile = fopen(argv[3], "w");
+    } else {
+      editor.log = noLog;
+    }
+    editorOpen(
+      argv[1],
+      &activePane(&editor.display)->file->filename,
+      activePane(&editor.display)->file->buffer,
+      &activePane(&editor.display)->file->undo,
+      &activePane(&editor.display)->file->unsavedChanges,
+      &activePane(&editor.display)->file->numberOfRows,
+      activePane(&editor.display)->file->cursorX,
+      activePane(&editor.display)->file->cursorY
+    );
+    splitBelow(&editor.display);
+  }
+
+  editorSetStatusMessage("Ctrl-q to quit, Ctrl-s to save");
+
+  while (1) {
+    <<main-loop>>
+  }
+  if (argc >= 4) {
+    fclose(editor.logFile);
+  }
+  return 0;
+#+end_src
+
 #+begin_src C :tangle ../tangled/kibi.c :mkdirp yes
   /*** includes ***/
 
@@ -1038,37 +1084,6 @@
   }
 
   int main(int argc, char *argv[]) {
-    enableRawMode();
-    initEditor();
-    if (argc >= 2) {
-      if (argc >= 4) {
-        editor.log = fileLog;
-        editor.logFile = fopen(argv[3], "w");
-      } else {
-        editor.log = noLog;
+    <<main>>
       }
-      editorOpen(
-                 argv[1],
-                 &activePane(&editor.display)->file->filename,
-                 activePane(&editor.display)->file->buffer,
-                 &activePane(&editor.display)->file->undo,
-                 &activePane(&editor.display)->file->unsavedChanges,
-                 &activePane(&editor.display)->file->numberOfRows,
-                 activePane(&editor.display)->file->cursorX,
-                 activePane(&editor.display)->file->cursorY
-                 );
-      splitBelow(&editor.display);
-    }
-
-    editorSetStatusMessage("Ctrl-q to quit, Ctrl-s to save");
-
-    while (1) {
-      editorRefreshScreen();
-      editorProcessKeypress();
-    }
-    if (argc >= 4) {
-      fclose(editor.logFile);
-    }
-    return 0;
-  }
 #+end_src
