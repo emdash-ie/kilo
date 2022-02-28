@@ -11,8 +11,12 @@ the screen and processing user input, blocking until the input is available.
   editorProcessKeypress();
 #+end_src
 
+* main
+
+The main function [[*Raw Mode][puts the terminal into raw mode]], reads the command line arguments, sets up the editor, and then enters the main loop.
+
 #+name: main
-#+begin_src C
+#+begin_src C :noweb yes
   enableRawMode();
   initEditor();
   if (argc >= 2) {
@@ -46,7 +50,7 @@ the screen and processing user input, blocking until the input is available.
   return 0;
 #+end_src
 
-#+begin_src C :tangle ../tangled/kibi.c :mkdirp yes
+#+begin_src C :tangle ../tangled/kibi.c :mkdirp yes :noweb yes
   /*** includes ***/
 
   #define _DEFAULT_SOURCE
@@ -142,30 +146,9 @@ the screen and processing user input, blocking until the input is available.
     exit(1);
   }
 
-  void disableRawMode() {
-    if (tcsetattr(STDIN_FILENO, TCSAFLUSH, &editor.original_termios) == -1) {
-      die("Failed to disable raw mode");
-    }
-  }
+  <<disableRawMode>>
 
-  void enableRawMode() {
-    if (tcgetattr(STDIN_FILENO, &editor.original_termios) == -1) {
-      die("Failed to get terminal attributes while enabling raw mode");
-    }
-    atexit(disableRawMode);
-
-    struct termios raw = editor.original_termios;
-    raw.c_iflag &= ~(BRKINT | INPCK | ISTRIP | ICRNL | IXON);
-    raw.c_oflag &= ~(OPOST);
-    raw.c_cflag |= (CS8);
-    raw.c_lflag &= ~(ECHO | ICANON | IEXTEN | ISIG);
-    raw.c_cc[VMIN] = 0;
-    raw.c_cc[VTIME] = 1;
-
-    if (tcsetattr(STDIN_FILENO, TCSAFLUSH, &raw) == -1) {
-      die("Failed to set terminal attributes while enabling raw mode");
-    }
-  }
+  <<enableRawMode>>
 
   int editorReadKey() {
     int nread;
@@ -233,8 +216,8 @@ the screen and processing user input, blocking until the input is available.
       if (write(STDOUT_FILENO, "\x1b[999C\x1b[999B", 12) != 12) return -1;
       return getCursorPosition(rows, cols);
     } else {
-      *cols = ws.ws_col;
-      *rows = ws.ws_row;
+      ,*cols = ws.ws_col;
+      ,*rows = ws.ws_row;
       return 0;
     }
   }
@@ -253,56 +236,56 @@ the screen and processing user input, blocking until the input is available.
   /*** row operations ***/
 
   void editorInsertRow(
-                       char *s,
-                       size_t length,
-                       bool pushUndo,
-                       ZipperBuffer *buffer,
-                       int *numberOfRows,
-                       int *unsavedChanges,
-                       UndoStack **undo,
-                       int cursorX,
-                       int cursorY
-                       ) {
+    char *s,
+    size_t length,
+    bool pushUndo,
+    ZipperBuffer *buffer,
+    int *numberOfRows,
+    int *unsavedChanges,
+    UndoStack **undo,
+    int cursorX,
+    int cursorY
+  ) {
     if (pushUndo) {
       editorPushUndo(buffer, undo, cursorX, cursorY);
     }
     zipperInsertRow(buffer, newRow(s, length, tabSize));
-    *numberOfRows = *numberOfRows + 1;
-    *unsavedChanges = *unsavedChanges + 1;
+    ,*numberOfRows = *numberOfRows + 1;
+    ,*unsavedChanges = *unsavedChanges + 1;
   }
 
   void editorInsertRowAfter(
-                            char *s,
-                            size_t length,
-                            bool pushUndo,
-                            ZipperBuffer *buffer,
-                            int *numberOfRows,
-                            int *unsavedChanges,
-                            UndoStack **undo,
-                            int cursorX,
-                            int *cursorY
-                            ) {
+    char *s,
+    size_t length,
+    bool pushUndo,
+    ZipperBuffer *buffer,
+    int *numberOfRows,
+    int *unsavedChanges,
+    UndoStack **undo,
+    int cursorX,
+    int *cursorY
+  ) {
     if (pushUndo) {
       editorPushUndo(buffer, undo, cursorX, *cursorY);
     }
     editorForwardLine();
     editorInsertRow(s, length, false, buffer, numberOfRows, unsavedChanges, undo, cursorX, *cursorY);
     if (*cursorY < activeHeight(&editor.display) - 1) {
-      *cursorY = *cursorY + 1;
+      ,*cursorY = *cursorY + 1;
     }
   }
 
   void editorAppendRow(
-                       char *s,
-                       size_t length,
-                       bool pushUndo,
-                       ZipperBuffer *buffer,
-                       int *numberOfRows,
-                       int *unsavedChanges,
-                       UndoStack **undo,
-                       int cursorX,
-                       int cursorY
-                       ) {
+    char *s,
+    size_t length,
+    bool pushUndo,
+    ZipperBuffer *buffer,
+    int *numberOfRows,
+    int *unsavedChanges,
+    UndoStack **undo,
+    int cursorX,
+    int cursorY
+  ) {
     int i = 0;
     while (buffer->forwards != NULL) {
       zipperForwardRow(buffer);
@@ -320,13 +303,13 @@ the screen and processing user input, blocking until the input is available.
   }
 
   void editorDeleteCurrentRow(
-                              ZipperBuffer *buffer,
-                              UndoStack **undo,
-                              int *numberOfRows,
-                              int *unsavedChanges,
-                              int cursorX,
-                              int cursorY
-                              ) {
+    ZipperBuffer *buffer,
+    UndoStack **undo,
+    int *numberOfRows,
+    int *unsavedChanges,
+    int cursorX,
+    int cursorY
+  ) {
     if (buffer->forwards == NULL) return;
     editorPushUndo(buffer, undo, cursorX, cursorY);
     buffer->forwards = buffer->forwards->tail;
@@ -335,14 +318,14 @@ the screen and processing user input, blocking until the input is available.
   }
 
   void editorDeleteRow(
-                       ZipperBuffer *buffer,
-                       UndoStack **undo,
-                       int at,
-                       int *numberOfRows,
-                       int *unsavedChanges,
-                       int cursorX,
-                       int cursorY
-                       ) {
+    ZipperBuffer *buffer,
+    UndoStack **undo,
+    int at,
+    int *numberOfRows,
+    int *unsavedChanges,
+    int cursorX,
+    int cursorY
+  ) {
     if (at < 0 || at >= *numberOfRows) {
       return;
     }
@@ -394,8 +377,8 @@ the screen and processing user input, blocking until the input is available.
   }
 
   /**
-   * Create a new row with the first n characters of row.
-   */
+   ,* Create a new row with the first n characters of row.
+   ,*/
   EditorRow *editorRowTake(EditorRow *row, unsigned int n) {
     char *newChars = malloc(n + 1);
     memcpy(newChars, row->chars, n);
@@ -404,8 +387,8 @@ the screen and processing user input, blocking until the input is available.
   }
 
   /**
-   * Create a new row with all characters of row after the first n.
-   */
+   ,* Create a new row with all characters of row after the first n.
+   ,*/
   EditorRow *editorRowDrop(EditorRow *row, unsigned int n) {
     char *newChars = malloc(row->size - n + 1);
     memcpy(newChars, &row->chars[n], row->size - n);
@@ -414,8 +397,8 @@ the screen and processing user input, blocking until the input is available.
   }
 
   /**
-   * Split a row at an index, return a RowList of the two new rows.
-   */
+   ,* Split a row at an index, return a RowList of the two new rows.
+   ,*/
   RowList *editorRowSplit(EditorRow *row, unsigned int at) {
     EditorRow *first = editorRowTake(row, at);
     EditorRow *second = editorRowDrop(row, at);
@@ -434,29 +417,29 @@ the screen and processing user input, blocking until the input is available.
 
   void editorForwardLine(ZipperBuffer *buffer, int *cursorY) {
     if (editorCurrentRow(buffer) != NULL) {
-      *cursorY += 1;
+      ,*cursorY += 1;
       zipperForwardRow(buffer);
     }
   }
 
   void editorBackwardLine(ZipperBuffer *buffer, int *cursorY) {
     if (editorPreviousRow(buffer) != NULL) {
-      *cursorY -= 1;
+      ,*cursorY -= 1;
       zipperBackwardRow(buffer);
     }
   }
 
   /**
-   * Replace the current row with a new one.
-   */
+   ,* Replace the current row with a new one.
+   ,*/
   void editorReplaceRow(
-                        ZipperBuffer *buffer,
-                        UndoStack **undo,
-                        int cursorX,
-                        int cursorY,
-                        int *unsavedChanges,
-                        EditorRow *row
-                        ) {
+    ZipperBuffer *buffer,
+    UndoStack **undo,
+    int cursorX,
+    int cursorY,
+    int *unsavedChanges,
+    EditorRow *row
+  ) {
     if (row == NULL) return;
     editorPushUndo(buffer, undo, cursorX, cursorY);
     RowList *old = buffer->forwards;
@@ -465,18 +448,18 @@ the screen and processing user input, blocking until the input is available.
     } else {
       buffer->forwards = rowListCons(row, old->tail);
     }
-    *unsavedChanges = *unsavedChanges + 1;
+    ,*unsavedChanges = *unsavedChanges + 1;
   }
 
   void editorInsertChar(
-                        int c,
-                        ZipperBuffer *buffer,
-                        UndoStack **undo,
-                        int *numberOfRows,
-                        int *unsavedChanges,
-                        int *cursorX,
-                        int cursorY
-                        ) {
+    int c,
+    ZipperBuffer *buffer,
+    UndoStack **undo,
+    int *numberOfRows,
+    int *unsavedChanges,
+    int *cursorX,
+    int cursorY
+  ) {
     EditorRow *row = editorCurrentRow(buffer);
     if (row == NULL) {
       editorInsertRow("", 0, true, buffer, numberOfRows, unsavedChanges, undo, *cursorX, cursorY);
@@ -484,7 +467,7 @@ the screen and processing user input, blocking until the input is available.
     }
     EditorRow *new = editorRowInsertChar(row, *cursorX, c);
     editorReplaceRow(buffer, undo, *cursorX, cursorY, unsavedChanges, new);
-    *cursorX = *cursorX + 1;
+    ,*cursorX = *cursorX + 1;
   }
 
   void editorInsertRows(ZipperBuffer *buffer, UndoStack **undo, int cursorX, int cursorY, RowList *new, int *unsavedChanges) {
@@ -498,17 +481,17 @@ the screen and processing user input, blocking until the input is available.
     }
     end->tail = buffer->forwards;
     buffer->forwards = new;
-    *unsavedChanges += added;
+    ,*unsavedChanges += added;
   }
 
   void editorInsertNewline(
-                           ZipperBuffer *buffer,
-                           UndoStack **undo,
-                           int *cursorX,
-                           int *cursorY,
-                           int *numberOfRows,
-                           int *unsavedChanges
-                           ) {
+    ZipperBuffer *buffer,
+    UndoStack **undo,
+    int *cursorX,
+    int *cursorY,
+    int *numberOfRows,
+    int *unsavedChanges
+  ) {
     EditorRow *row = editorCurrentRow(buffer);
     if (*cursorX == 0 || row == NULL) {
       editorInsertRowAfter("", 0, true, buffer, numberOfRows, unsavedChanges, undo, *cursorX, cursorY);
@@ -518,18 +501,18 @@ the screen and processing user input, blocking until the input is available.
       editorInsertRows(buffer, undo, *cursorX, *cursorY, new, unsavedChanges);
 
       editorForwardLine(buffer, cursorY);
-      *cursorX = 0;
+      ,*cursorX = 0;
     }
   }
 
   void editorDeleteChar(
-                        ZipperBuffer *buffer,
-                        UndoStack **undo,
-                        int *cursorX,
-                        int *cursorY,
-                        int *unsavedChanges,
-                        int *numberOfRows
-                        ) {
+    ZipperBuffer *buffer,
+    UndoStack **undo,
+    int *cursorX,
+    int *cursorY,
+    int *unsavedChanges,
+    int *numberOfRows
+  ) {
     EditorRow *current = editorCurrentRow(buffer);
     if (current == NULL) return;
     EditorRow *previous = editorPreviousRow(buffer);
@@ -537,9 +520,9 @@ the screen and processing user input, blocking until the input is available.
     if (*cursorX > 0) {
       EditorRow *new = editorRowDeleteChar(current, *cursorX - 1);
       editorReplaceRow(buffer, undo, *cursorX, *cursorY, unsavedChanges, new);
-      *cursorX -= 1;
+      ,*cursorX -= 1;
     } else {
-      *cursorX = previous->size;
+      ,*cursorX = previous->size;
       EditorRow *new = editorRowAppendString(previous,
                                              current->chars,
                                              current->size);
@@ -550,18 +533,18 @@ the screen and processing user input, blocking until the input is available.
   }
 
   void editorJumpToEnd(
-                       ZipperBuffer *buffer,
-                       int *cursorY
-                       ) {
+    ZipperBuffer *buffer,
+    int *cursorY
+  ) {
     while (editorCurrentRow(buffer) != NULL) {
       editorForwardLine(buffer, cursorY);
     }
   }
 
   void editorJumpToStart(
-                         ZipperBuffer *buffer,
-                         int *cursorY
-                         ) {
+    ZipperBuffer *buffer,
+    int *cursorY
+  ) {
     while (editorPreviousRow(buffer) != NULL) {
       editorBackwardLine(buffer, cursorY);
     }
@@ -580,7 +563,7 @@ the screen and processing user input, blocking until the input is available.
       totalLength += editorBuffer->backwards->head->size + 1;
       zipperBackwardRow(editorBuffer);
     }
-    *bufferLength = totalLength;
+    ,*bufferLength = totalLength;
 
     char *buffer = malloc(totalLength);
     char *p = buffer;
@@ -588,7 +571,7 @@ the screen and processing user input, blocking until the input is available.
       memcpy(p, editorBuffer->forwards->head->chars,
              editorBuffer->forwards->head->size);
       p += editorBuffer->forwards->head->size;
-      *p = '\n';
+      ,*p = '\n';
       p++;
       zipperForwardRow(editorBuffer);
     }
@@ -600,17 +583,17 @@ the screen and processing user input, blocking until the input is available.
   }
 
   void editorOpen(
-                  char *filename,
-                  char **editorFilename,
-                  ZipperBuffer *buffer,
-                  UndoStack **undo,
-                  int *unsavedChanges,
-                  int *numberOfRows,
-                  int cursorX,
-                  int cursorY
-                  ) {
+    char *filename,
+    char **editorFilename,
+    ZipperBuffer *buffer,
+    UndoStack **undo,
+    int *unsavedChanges,
+    int *numberOfRows,
+    int cursorX,
+    int cursorY
+  ) {
     free(*editorFilename);
-    *editorFilename = strdup(filename);
+    ,*editorFilename = strdup(filename);
     FILE *fp = fopen(filename, "r");
     if (!fp) die("Couldn't open file");
     char *line = NULL;
@@ -623,13 +606,13 @@ the screen and processing user input, blocking until the input is available.
       }
       char *rowChars = malloc(lineLength + 1);
       memcpy(rowChars, line, lineLength);
-      rowChars[lineLength + 1] = '\0';
+      rowChars[lineLength] = '\0';
       editorInsertRow(rowChars, lineLength, false, buffer, numberOfRows, unsavedChanges, undo, cursorX, cursorY);
     }
     buffer->forwards = rowListReverse(buffer->forwards);
     free(line);
     fclose(fp);
-    *unsavedChanges = 0;
+    ,*unsavedChanges = 0;
   }
 
   void editorSave(ZipperBuffer *editorBuffer, char *filename, int *unsavedChanges) {
@@ -643,7 +626,7 @@ the screen and processing user input, blocking until the input is available.
           close(fileDescriptor);
           free(buffer);
           editorSetStatusMessage("%d bytes written to disk", length);
-          *unsavedChanges = 0;
+          ,*unsavedChanges = 0;
           return;
         }
       }
@@ -680,9 +663,9 @@ the screen and processing user input, blocking until the input is available.
   /*** output ***/
 
   /**
-   * Split the current pane in two, with the new (non-focused) split below the
-   * current one.
-   */
+   ,* Split the current pane in two, with the new (non-focused) split below the
+   ,* current one.
+   ,*/
   void splitBelow(Display *display) {
     int upperHeight = display->height / 2;
     int lowerHeight = display->height - upperHeight;
@@ -774,11 +757,11 @@ the screen and processing user input, blocking until the input is available.
     editorDrawEmpties(ab, editor.display.height / 3 - 1);
     char welcome[80];
     int welcomeLength = snprintf(
-                                 welcome,
-                                 sizeof(welcome),
-                                 "Kibi editor - version %s",
-                                 KIBI_VERSION
-                                 );
+      welcome,
+      sizeof(welcome),
+      "Kibi editor - version %s",
+      KIBI_VERSION
+  );
     if (welcomeLength > editor.display.width) {
       welcomeLength = editor.display.width;
     }
@@ -908,19 +891,19 @@ the screen and processing user input, blocking until the input is available.
     case ARROW_RIGHT:
     case CTRL_KEY('f'):
       if (row && *cursorX < row->size) {
-        *cursorX += 1;
+        ,*cursorX += 1;
       } else if (row && *cursorX == row->size) {
         editorForwardLine(buffer, cursorY);
-        *cursorX = 0;
+        ,*cursorX = 0;
       }
       break;
     case ARROW_LEFT:
     case CTRL_KEY('b'):
       if (*cursorX > 0) {
-        *cursorX -= 1;
+        ,*cursorX -= 1;
       } else if (editorPreviousRow(buffer) != NULL) {
         editorBackwardLine(buffer, cursorY);
-        *cursorX = buffer->forwards->head->size;
+        ,*cursorX = buffer->forwards->head->size;
       }
       break;
     }
@@ -928,7 +911,7 @@ the screen and processing user input, blocking until the input is available.
     row = editorCurrentRow(buffer);
     int rowLength = row ? row->size : 0;
     if (*cursorX > rowLength) {
-      *cursorX = rowLength;
+      ,*cursorX = rowLength;
     }
   }
 
@@ -940,13 +923,13 @@ the screen and processing user input, blocking until the input is available.
     switch (c) {
     case '\r':
       editorInsertNewline(
-                          fileData->buffer,
-                          &fileData->undo,
-                          &fileData->cursorX,
-                          &fileData->cursorY,
-                          &fileData->numberOfRows,
-                          &fileData->unsavedChanges
-                          );
+        fileData->buffer,
+        &fileData->undo,
+        &fileData->cursorX,
+        &fileData->cursorY,
+        &fileData->numberOfRows,
+        &fileData->unsavedChanges
+    );
       break;
     case CTRL_KEY('z'): {
       onFailure(editorUndo(fileData), editorSetStatusMessage);
@@ -987,24 +970,24 @@ the screen and processing user input, blocking until the input is available.
     case BACKSPACE:
     case CTRL_KEY('h'):
       editorDeleteChar(
-                       fileData->buffer,
-                       &fileData->undo,
-                       &fileData->cursorX,
-                       &fileData->cursorY,
-                       &fileData->unsavedChanges,
-                       &fileData->numberOfRows
-                       );
+        fileData->buffer,
+        &fileData->undo,
+        &fileData->cursorX,
+        &fileData->cursorY,
+        &fileData->unsavedChanges,
+        &fileData->numberOfRows
+    );
       break;
     case DELETE_KEY:
       editorMoveCursor(fileData->buffer, &fileData->cursorX, &fileData->cursorY, ARROW_RIGHT);
       editorDeleteChar(
-                       fileData->buffer,
-                       &fileData->undo,
-                       &fileData->cursorX,
-                       &fileData->cursorY,
-                       &fileData->unsavedChanges,
-                       &fileData->numberOfRows
-                       );
+        fileData->buffer,
+        &fileData->undo,
+        &fileData->cursorX,
+        &fileData->cursorY,
+        &fileData->unsavedChanges,
+        &fileData->numberOfRows
+    );
       break;
     case PAGE_UP:
     case PAGE_DOWN:
@@ -1022,11 +1005,11 @@ the screen and processing user input, blocking until the input is available.
         int times = activeHeight(&editor.display);
         while (times--) {
           editorMoveCursor(
-                           fileData->buffer,
-                           &fileData->cursorX,
-                           &fileData->cursorY,
-                           (c == PAGE_UP || c == CTRL_KEY('u')) ? ARROW_UP : ARROW_DOWN
-                           );
+            fileData->buffer,
+            &fileData->cursorX,
+            &fileData->cursorY,
+            (c == PAGE_UP || c == CTRL_KEY('u')) ? ARROW_UP : ARROW_DOWN
+        );
         }
       }
       break;
@@ -1051,14 +1034,14 @@ the screen and processing user input, blocking until the input is available.
       break;
     default:
       editorInsertChar(
-                       c,
-                       fileData->buffer,
-                       &fileData->undo,
-                       &fileData->numberOfRows,
-                       &fileData->unsavedChanges,
-                       &fileData->cursorX,
-                       fileData->cursorY
-                       );
+        c,
+        fileData->buffer,
+        &fileData->undo,
+        &fileData->numberOfRows,
+        &fileData->unsavedChanges,
+        &fileData->cursorX,
+        fileData->cursorY
+    );
     }
     quitTimes = 1;
   }
@@ -1086,4 +1069,41 @@ the screen and processing user input, blocking until the input is available.
   int main(int argc, char *argv[]) {
     <<main>>
       }
+#+end_src
+
+* Raw Mode
+
+The program puts the terminal into raw mode to get more control of the screen, where normally the terminal would just accumulate everything.
+
+I don’t really know much about the details. The code gets the current terminal settings, stores them, then makes a modified copy to set. It also arranges for ~disableRawMode~ to be called when the program exits.
+
+#+name: enableRawMode
+#+begin_src C
+  void enableRawMode() {
+    if (tcgetattr(STDIN_FILENO, &editor.original_termios) == -1) {
+      die("Failed to get terminal attributes while enabling raw mode");
+    }
+    atexit(disableRawMode);
+
+    struct termios raw = editor.original_termios;
+    raw.c_iflag &= ~(BRKINT | INPCK | ISTRIP | ICRNL | IXON);
+    raw.c_oflag &= ~(OPOST);
+    raw.c_cflag |= (CS8);
+    raw.c_lflag &= ~(ECHO | ICANON | IEXTEN | ISIG);
+    raw.c_cc[VMIN] = 0;
+    raw.c_cc[VTIME] = 1;
+
+    if (tcsetattr(STDIN_FILENO, TCSAFLUSH, &raw) == -1) {
+      die("Failed to set terminal attributes while enabling raw mode");
+    }
+  }
+#+end_src
+
+#+name: disableRawMode
+#+begin_src C
+  void disableRawMode() {
+    if (tcsetattr(STDIN_FILENO, TCSAFLUSH, &editor.original_termios) == -1) {
+      die("Failed to disable raw mode");
+    }
+  }
 #+end_src
