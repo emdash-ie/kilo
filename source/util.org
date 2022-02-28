@@ -3,12 +3,12 @@
 Utility functions!
 
 * Header
-  #+begin_src C :tangle ../tangled/util.h :mkdirp yes
+  #+begin_src C :tangle ../tangled/util.h :mkdirp yes :main no
     #pragma once
     int clip(int x, int min, int max);
   #+end_src
 * Body
-  #+begin_src C :tangle ../tangled/util.c :mkdirp yes
+  #+begin_src C :tangle ../tangled/util.c :mkdirp yes :main no
     int clip(int x, int min, int max) {
       if (x <= min) {
         return min;

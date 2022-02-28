@@ -3,7 +3,7 @@
 A generic singly-linked list and instantiations of the type at specific types.
 
 * Type Definition
-  #+begin_src C :tangle ../tangled/lists/MakeLinkedList.h :mkdirp yes
+  #+begin_src C :tangle ../tangled/lists/MakeLinkedList.h :mkdirp yes :main no
     #if n == 1
 
     #ifdef a
@@ -286,7 +286,7 @@ A generic singly-linked list and instantiations of the type at specific types.
   #+end_src
 * Instantiations
 ** DisplayRow
-   #+begin_src C :tangle ../tangled/lists/DisplayRow.h :mkdirp yes
+   #+begin_src C :tangle ../tangled/lists/DisplayRow.h :mkdirp yes :main no
      #pragma once
 
      typedef struct DisplayRow DisplayRow;
@@ -295,7 +295,7 @@ A generic singly-linked list and instantiations of the type at specific types.
      #define a DisplayRow
      #include "MakeLinkedList.h"
    #+end_src
-   #+begin_src C :tangle ../tangled/lists/DisplayRow.c :mkdirp yes
+   #+begin_src C :tangle ../tangled/lists/DisplayRow.c :mkdirp yes :main no
      typedef struct DisplayRow DisplayRow;
 
      #define n 1
@@ -304,7 +304,7 @@ A generic singly-linked list and instantiations of the type at specific types.
      #include "MakeLinkedList.h"
    #+end_src
 ** Pane
-   #+begin_src C :tangle ../tangled/lists/Pane.h :mkdirp yes
+   #+begin_src C :tangle ../tangled/lists/Pane.h :mkdirp yes :main no
      #pragma once
 
      #include "../pane.h"
@@ -313,7 +313,7 @@ A generic singly-linked list and instantiations of the type at specific types.
      #define a Pane
      #include "MakeLinkedList.h"
    #+end_src
-   #+begin_src C :tangle ../tangled/lists/Pane.c :mkdirp yes
+   #+begin_src C :tangle ../tangled/lists/Pane.c :mkdirp yes :main no
      #include "../pane.h"
 
      #define n 1
@@ -322,7 +322,7 @@ A generic singly-linked list and instantiations of the type at specific types.
      #include "MakeLinkedList.h"
    #+end_src
 ** PaneRow
-   #+begin_src C :tangle ../tangled/lists/PaneRow.h :mkdirp yes
+   #+begin_src C :tangle ../tangled/lists/PaneRow.h :mkdirp yes :main no
      #pragma once
 
      typedef struct PaneRow PaneRow;
@@ -331,7 +331,7 @@ A generic singly-linked list and instantiations of the type at specific types.
      #define a PaneRow
      #include "MakeLinkedList.h"
    #+end_src
-   #+begin_src C :tangle ../tangled/lists/PaneRow.c :mkdirp yes
+   #+begin_src C :tangle ../tangled/lists/PaneRow.c :mkdirp yes :main no
      typedef struct PaneRow PaneRow;
 
      #define n 1
@@ -340,21 +340,21 @@ A generic singly-linked list and instantiations of the type at specific types.
      #include "MakeLinkedList.h"
    #+end_src
 ** int
-   #+begin_src C :tangle ../tangled/lists/int.h :mkdirp yes
+   #+begin_src C :tangle ../tangled/lists/int.h :mkdirp yes :main no
      #pragma once
 
      #define n 1
      #define a int
      #include "MakeLinkedList.h"
    #+end_src
-   #+begin_src C :tangle ../tangled/lists/int.c :mkdirp yes
+   #+begin_src C :tangle ../tangled/lists/int.c :mkdirp yes :main no
      #define n 1
      #define a int
      #define LinkedListImplementation
      #include "MakeLinkedList.h"
    #+end_src
 ** ListPane
-   #+begin_src C :tangle ../tangled/lists/ListPane.h :mkdirp yes
+   #+begin_src C :tangle ../tangled/lists/ListPane.h :mkdirp yes :main no
      #pragma once
 
      #include "Pane.h"
@@ -363,7 +363,7 @@ A generic singly-linked list and instantiations of the type at specific types.
      #define a List(Pane)
      #include "MakeLinkedList.h"
    #+end_src
-   #+begin_src C :tangle ../tangled/lists/ListPane.c :mkdirp yes
+   #+begin_src C :tangle ../tangled/lists/ListPane.c :mkdirp yes :main no
      #include "Pane.h"
 
      #define n 1
@@ -372,7 +372,7 @@ A generic singly-linked list and instantiations of the type at specific types.
      #include "MakeLinkedList.h"
    #+end_src
 ** ListPaneRow
-   #+begin_src C :tangle ../tangled/lists/ListPaneRow.h :mkdirp yes
+   #+begin_src C :tangle ../tangled/lists/ListPaneRow.h :mkdirp yes :main no
      #pragma once
 
      #include "PaneRow.h"
@@ -381,7 +381,7 @@ A generic singly-linked list and instantiations of the type at specific types.
      #define a List(PaneRow)
      #include "MakeLinkedList.h"
    #+end_src
-   #+begin_src C :tangle ../tangled/lists/ListPaneRow.c :mkdirp yes
+   #+begin_src C :tangle ../tangled/lists/ListPaneRow.c :mkdirp yes :main no
      #include "PaneRow.h"
 
      #define n 1
@@ -390,7 +390,7 @@ A generic singly-linked list and instantiations of the type at specific types.
      #include "MakeLinkedList.h"
    #+end_src
 ** List(List(PaneRow))
-   #+begin_src C :tangle ../tangled/lists/ListListPaneRow.h :mkdirp yes
+   #+begin_src C :tangle ../tangled/lists/ListListPaneRow.h :mkdirp yes :main no
      #pragma once
 
      #include "ListPaneRow.h"
@@ -399,7 +399,7 @@ A generic singly-linked list and instantiations of the type at specific types.
      #define a List(List(PaneRow))
      #include "MakeLinkedList.h"
    #+end_src
-   #+begin_src C :tangle ../tangled/lists/ListListPaneRow.c :mkdirp yes
+   #+begin_src C :tangle ../tangled/lists/ListListPaneRow.c :mkdirp yes :main no
      #include "ListPaneRow.h"
 
      #define n 1
@@ -408,7 +408,7 @@ A generic singly-linked list and instantiations of the type at specific types.
      #include "MakeLinkedList.h"
    #+end_src
 ** Pane, List(PaneRow)
-   #+begin_src C :tangle ../tangled/lists/Pane-ListPaneRow.h :mkdirp yes
+   #+begin_src C :tangle ../tangled/lists/Pane-ListPaneRow.h :mkdirp yes :main no
      #pragma once
 
      #include "../pane.h"
@@ -420,7 +420,7 @@ A generic singly-linked list and instantiations of the type at specific types.
      #define b List(PaneRow)
      #include "MakeLinkedList.h"
    #+end_src
-   #+begin_src C :tangle ../tangled/lists/Pane-ListPaneRow.c :mkdirp yes
+   #+begin_src C :tangle ../tangled/lists/Pane-ListPaneRow.c :mkdirp yes :main no
      #include "../pane.h"
      #include "ListPane.h"
      #include "ListPaneRow.h"
@@ -432,7 +432,7 @@ A generic singly-linked list and instantiations of the type at specific types.
      #include "MakeLinkedList.h"
    #+end_src
 ** int, int, int
-   #+begin_src C :tangle ../tangled/lists/int-int-int.h :mkdirp yes
+   #+begin_src C :tangle ../tangled/lists/int-int-int.h :mkdirp yes :main no
      #pragma once
      #include "int.h"
 
@@ -442,7 +442,7 @@ A generic singly-linked list and instantiations of the type at specific types.
      #define c int
      #include "MakeLinkedList.h"
    #+end_src
-   #+begin_src C :tangle ../tangled/lists/int-int-int.c :mkdirp yes
+   #+begin_src C :tangle ../tangled/lists/int-int-int.c :mkdirp yes :main no
      #include "int-int-int.h"
 
      #define n 3
@@ -453,7 +453,7 @@ A generic singly-linked list and instantiations of the type at specific types.
      #include "MakeLinkedList.h"
    #+end_src
 ** Pane, int, int, List(PaneRow)
-   #+begin_src C :tangle ../tangled/lists/Pane-int-int-ListPaneRow.h :mkdirp yes
+   #+begin_src C :tangle ../tangled/lists/Pane-int-int-ListPaneRow.h :mkdirp yes :main no
      #pragma once
 
      #include "../pane.h"
@@ -469,7 +469,7 @@ A generic singly-linked list and instantiations of the type at specific types.
      #define d List(PaneRow)
      #include "MakeLinkedList.h"
    #+end_src
-   #+begin_src C :tangle ../tangled/lists/Pane-int-int-ListPaneRow.c :mkdirp yes
+   #+begin_src C :tangle ../tangled/lists/Pane-int-int-ListPaneRow.c :mkdirp yes :main no
      #include "Pane.h"
      #include "int.h"
      #include "ListListPaneRow.h"
@@ -483,7 +483,7 @@ A generic singly-linked list and instantiations of the type at specific types.
      #include "MakeLinkedList.h"
    #+end_src
 ** DisplayRow, int, int, List(List(PaneRow))
-   #+begin_src C :tangle ../tangled/lists/DisplayRow-int-int-ListListPaneRow.h :mkdirp yes
+   #+begin_src C :tangle ../tangled/lists/DisplayRow-int-int-ListListPaneRow.h :mkdirp yes :main no
      #pragma once
 
      #include "int.h"
@@ -499,7 +499,7 @@ A generic singly-linked list and instantiations of the type at specific types.
      #define d List(List(PaneRow))
      #include "MakeLinkedList.h"
    #+end_src
-   #+begin_src C :tangle ../tangled/lists/DisplayRow-int-int-ListListPaneRow.c :mkdirp yes
+   #+begin_src C :tangle ../tangled/lists/DisplayRow-int-int-ListListPaneRow.c :mkdirp yes :main no
      #include "int.h"
      #include "ListListPaneRow.h"
      #include "DisplayRow.h"

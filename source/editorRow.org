@@ -1,5 +1,5 @@
 * Header
-  #+begin_src C :tangle ../tangled/editorRow.h :mkdirp yes
+  #+begin_src C :tangle ../tangled/editorRow.h :mkdirp yes :main no
     #ifndef EDITOR_ROW
     #define EDITOR_ROW
 
@@ -28,7 +28,7 @@
     #endif
   #+end_src
 * Body
-  #+begin_src C :tangle ../tangled/editorRow.c :mkdirp yes
+  #+begin_src C :tangle ../tangled/editorRow.c :mkdirp yes :main no
     #include <stdlib.h>
     #include <string.h>
     #include "editorRow.h"

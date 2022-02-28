@@ -3,7 +3,7 @@
 Code for managing files.
 
 * Header
-  #+begin_src C :tangle ../tangled/fileData.h :mkdirp yes
+  #+begin_src C :tangle ../tangled/fileData.h :mkdirp yes :main no
     #pragma once
     #include <stdbool.h>
 
@@ -73,7 +73,7 @@ Code for managing files.
     OperationResult *editorRedo(FileData *file);
   #+end_src
 * Body
-  #+begin_src C :tangle ../tangled/fileData.c :mkdir yes
+  #+begin_src C :tangle ../tangled/fileData.c :mkdir yes :main no
     #include "fileData.h"
     #include <stdlib.h>
 

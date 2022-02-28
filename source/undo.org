@@ -1,7 +1,7 @@
 #+Title: Undo
 
 * Header
-  #+begin_src C :tangle ../tangled/undo.h :mkdirp yes
+  #+begin_src C :tangle ../tangled/undo.h :mkdirp yes :main no
     #ifndef UNDO
     #define UNDO
 
@@ -27,7 +27,7 @@
     #endif
   #+end_src
 * Body
-  #+begin_src C :tangle ../tangled/undo.c :mkdirp yes
+  #+begin_src C :tangle ../tangled/undo.c :mkdirp yes :main no
   #include "undo.h"
 
   UndoStack *undoCons(RowList *forwards,

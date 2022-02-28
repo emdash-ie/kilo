@@ -27,7 +27,7 @@ Questions to ask:
   -> Buffers need a function: lines :: RelativeIndex -> LinkedList[Line]
 
 * Header
-  #+begin_src C :tangle ../tangled/pane.h :mkdirp yes
+  #+begin_src C :tangle ../tangled/pane.h :mkdirp yes :main no
     #pragma once
     #include "fileData.h"
     #include "lists/PaneRow.h"
@@ -66,7 +66,7 @@ Questions to ask:
     List(PaneRow) *paneDraw(Pane *p, int *height, int *width);
   #+end_src
 * Body
-  #+begin_src C :tangle ../tangled/pane.c
+  #+begin_src C :tangle ../tangled/pane.c :main no
     #include "editorRow.h"
     #include "lists/PaneRow.h"
     #include "pane.h"
