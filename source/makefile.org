@@ -13,10 +13,10 @@ test-objects = $(patsubst %.c,%.o,$(wildcard test/*.c)) $(common-objects)
 main-objects = kibi.o $(common-objects)
 
 test : $(test-objects)
-	cc -o testLists $(test-objects)
+	cc $(CFLAGS) -o testLists $(test-objects)
 
 kibi : $(main-objects)
-	cc -o kibi $(main-objects)
+	cc $(CFLAGS) -o kibi $(main-objects)
 
 kibi.o: kibi.c editorRow.h fileData.h pane.h undo.h zipperBuffer.h display.h
 zipperBuffer.o: zipperBuffer.c editorRow.h
