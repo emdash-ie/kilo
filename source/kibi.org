@@ -123,6 +123,7 @@ The main function [[*Raw Mode][puts the terminal into raw mode]], reads the comm
     va_list args;
     va_start(args, format);
     vprintf(format, args);
+    puts("\n");
     va_end(args);
   }
 
@@ -130,6 +131,7 @@ The main function [[*Raw Mode][puts the terminal into raw mode]], reads the comm
     va_list args;
     va_start(args, format);
     vfprintf(editor.logFile, format, args);
+    fputs("\n", editor.logFile);
     va_end(args);
   }
 
@@ -728,7 +730,7 @@ The main function [[*Raw Mode][puts the terminal into raw mode]], reads the comm
     }
   }
 
-  void editorDrawStatusBar(struct abuf *ab, int top, int left, int height, int width, int cursorX, int cursorY, int fileCursorX, int fileCursorY) {
+  void editorDrawStatusBar(struct abuf *ab) {
     char status[80], rightStatus[80];
     int length = snprintf(status, sizeof(status), "\"%.20s\" - %d lines %s",
                           activePane(&editor.display)->file->filename
@@ -736,9 +738,11 @@ The main function [[*Raw Mode][puts the terminal into raw mode]], reads the comm
                           : "[No name]",
                           activePane(&editor.display)->file->numberOfRows,
                           activePane(&editor.display)->file->unsavedChanges ? "(modified)" : "");
-    int rightLength = snprintf(rightStatus, sizeof(rightStatus), "(%d,%d,%d,%d,%d,%d,%d,%d) %d/%d",
-                               top, left, height, width, cursorX, cursorY, fileCursorX, fileCursorY,
-                               activePane(&editor.display)->cursorY + 1, activePane(&editor.display)->file->numberOfRows);
+    int rightLength = snprintf(
+      rightStatus, sizeof(rightStatus), "%d/%d",
+      activePane(&editor.display)->cursorY + 1,
+      activePane(&editor.display)->file->numberOfRows
+    );
     if (length > editor.display.width) length = editor.display.width;
     abAppend(ab, status, length);
     while (length < editor.display.width) {
@@ -851,7 +855,7 @@ The main function [[*Raw Mode][puts the terminal into raw mode]], reads the comm
     abAppend(&ab, "\x1b[H", 3);
 
     editorDrawRows(&ab);
-    editorDrawStatusBar(&ab, activePane(&editor.display)->top, activePane(&editor.display)->left, editor.display.height, editor.display.width, activePane(&editor.display)->cursorX, activePane(&editor.display)->cursorY, activePane(&editor.display)->file->cursorX, activePane(&editor.display)->file->cursorY);
+    editorDrawStatusBar(&ab);
     editorDrawMessageBar(&ab);
     char buf[32];
     ScreenCursor c = activeCursor(&editor.display);
