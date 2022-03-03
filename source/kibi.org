@@ -71,6 +71,7 @@ The main function [[*Raw Mode][puts the terminal into raw mode]], reads the comm
   #include <fcntl.h>
 
   #include "display.h"
+  #include "edit.h"
   #include "editorRow.h"
   #include "fileData.h"
   #include "pane.h"
@@ -131,8 +132,8 @@ The main function [[*Raw Mode][puts the terminal into raw mode]], reads the comm
     va_list args;
     va_start(args, format);
     vfprintf(editor.logFile, format, args);
-    fputs("\n", editor.logFile);
     va_end(args);
+    fputs("\n", editor.logFile);
   }
 
   void noLog(char *format, ...) {
@@ -885,15 +886,26 @@ The main function [[*Raw Mode][puts the terminal into raw mode]], reads the comm
     EditorRow *row = editorCurrentRow(buffer);
     switch (key) {
     case ARROW_DOWN:
-    case CTRL_KEY('n'):
+    case CTRL_KEY('n'): {
+      struct Navigation n = {.type = ToNext, .objectType = Line};
+      struct String s = navigationToString(n);
+      editor.log(s.s);
       editorForwardLine(buffer, cursorY);
       break;
+    }
     case ARROW_UP:
-    case CTRL_KEY('p'):
+    case CTRL_KEY('p'): {
+      struct Navigation n = {.type = ToPrevious, .objectType = Line};
+      struct String s = navigationToString(n);
+      editor.log(s.s);
       editorBackwardLine(buffer, cursorY);
       break;
+    }
     case ARROW_RIGHT:
-    case CTRL_KEY('f'):
+    case CTRL_KEY('f'): {
+      struct Navigation n = {.type = ToNext, .objectType = Character};
+      struct String s = navigationToString(n);
+      editor.log(s.s);
       if (row && *cursorX < row->size) {
         ,*cursorX += 1;
       } else if (row && *cursorX == row->size) {
@@ -901,8 +913,12 @@ The main function [[*Raw Mode][puts the terminal into raw mode]], reads the comm
         ,*cursorX = 0;
       }
       break;
+    }
     case ARROW_LEFT:
-    case CTRL_KEY('b'):
+    case CTRL_KEY('b'): {
+      struct Navigation n = {.type = ToPrevious, .objectType = Line};
+      struct String s = navigationToString(n);
+      editor.log(s.s);
       if (*cursorX > 0) {
         ,*cursorX -= 1;
       } else if (editorPreviousRow(buffer) != NULL) {
@@ -910,6 +926,7 @@ The main function [[*Raw Mode][puts the terminal into raw mode]], reads the comm
         ,*cursorX = buffer->forwards->head->size;
       }
       break;
+      }
     }
 
     row = editorCurrentRow(buffer);
@@ -925,7 +942,11 @@ The main function [[*Raw Mode][puts the terminal into raw mode]], reads the comm
     FileData *fileData = activePane(&editor.display)->file;
 
     switch (c) {
-    case '\r':
+    case '\r': {
+      struct Edit e = {.type = InsertText, .insert = {.text = "\n"}};
+      struct String s = editToString(e);
+      editor.log(s.s);
+      free(s.s);
       editorInsertNewline(
         fileData->buffer,
         &fileData->undo,
@@ -935,6 +956,7 @@ The main function [[*Raw Mode][puts the terminal into raw mode]], reads the comm
         &fileData->unsavedChanges
     );
       break;
+      }
     case CTRL_KEY('z'): {
       onFailure(editorUndo(fileData), editorSetStatusMessage);
       break;
@@ -959,12 +981,18 @@ The main function [[*Raw Mode][puts the terminal into raw mode]], reads the comm
       editorSave(fileData->buffer, fileData->filename, &fileData->unsavedChanges);
       break;
     case HOME_KEY:
-    case CTRL_KEY('a'):
+    case CTRL_KEY('a'): {
+      struct Navigation n = {.type = ToStartOf, .objectType = Line};
+      struct String s = navigationToString(n);
+      editor.log(s.s);
       fileData->cursorX = 0;
       break;
+      }
     case END_KEY:
-    case CTRL_KEY('e'):
-      {
+    case CTRL_KEY('e'): {
+        struct Navigation n = {.type = ToEndOf, .objectType = Line};
+        struct String s = navigationToString(n);
+        editor.log(s.s);
         EditorRow *current = editorCurrentRow(fileData->buffer);
         if (current != NULL) {
           fileData->cursorX = current->size;
@@ -972,7 +1000,11 @@ The main function [[*Raw Mode][puts the terminal into raw mode]], reads the comm
         break;
       }
     case BACKSPACE:
-    case CTRL_KEY('h'):
+    case CTRL_KEY('h'): {
+      struct Edit e = {.type = DeleteText, .delete = {.object = {.type = Character}}};
+      struct String s = editToString(e);
+      editor.log(s.s);
+      free(s.s);
       editorDeleteChar(
         fileData->buffer,
         &fileData->undo,
@@ -982,6 +1014,7 @@ The main function [[*Raw Mode][puts the terminal into raw mode]], reads the comm
         &fileData->numberOfRows
     );
       break;
+      }
     case DELETE_KEY:
       editorMoveCursor(fileData->buffer, &fileData->cursorX, &fileData->cursorY, ARROW_RIGHT);
       editorDeleteChar(
@@ -999,8 +1032,14 @@ The main function [[*Raw Mode][puts the terminal into raw mode]], reads the comm
     case CTRL_KEY('d'):
       {
         if (c == PAGE_UP || c == CTRL_KEY('u')) {
+          struct Navigation n = {.type = ToPrevious, .objectType = Page};
+          struct String s = navigationToString(n);
+          editor.log(s.s);
           fileData->cursorY = activePane(&editor.display)->top;
         } else {
+          struct Navigation n = {.type = ToNext, .objectType = Page};
+          struct String s = navigationToString(n);
+          editor.log(s.s);
           fileData->cursorY = activePane(&editor.display)->top + activeHeight(&editor.display) - 1;
           if (fileData->cursorY > fileData->numberOfRows) {
             fileData->cursorY = fileData->numberOfRows;
@@ -1017,9 +1056,13 @@ The main function [[*Raw Mode][puts the terminal into raw mode]], reads the comm
         }
       }
       break;
-    case CTRL_KEY('g'):
+    case CTRL_KEY('g'): {
+      struct Navigation n = {.type = ToEndOf, .objectType = Buffer};
+      struct String s = navigationToString(n);
+      editor.log(s.s);
       editorJumpToEnd(fileData->buffer, &fileData->cursorY);
       break;
+      }
     case ARROW_DOWN:
     case ARROW_UP:
     case ARROW_RIGHT:
@@ -1036,7 +1079,14 @@ The main function [[*Raw Mode][puts the terminal into raw mode]], reads the comm
     case CTRL_KEY('w'):
       editorSwitchPane();
       break;
-    default:
+    default: {
+      char *text = malloc(sizeof(char) * 2);
+      text[0] = c; text[1] = 0;
+      struct Edit e = {.type = InsertText, .insert = {.text = text}};
+      struct String s = editToString(e);
+      editor.log(s.s);
+      free(s.s);
+      free(text);
       editorInsertChar(
         c,
         fileData->buffer,
@@ -1045,7 +1095,8 @@ The main function [[*Raw Mode][puts the terminal into raw mode]], reads the comm
         &fileData->unsavedChanges,
         &fileData->cursorX,
         fileData->cursorY
-    );
+      );
+      }
     }
     quitTimes = 1;
   }
