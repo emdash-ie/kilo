@@ -10,7 +10,6 @@
                    "pane.org"
                    "registers.org"
                    "string.org"
-                   "test.txt"
                    "tuple.org"
                    "undo.org"
                    "util.org"
