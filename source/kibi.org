@@ -731,35 +731,6 @@ The main function [[*Raw Mode][puts the terminal into raw mode]], reads the comm
     }
   }
 
-  void editorDrawStatusBar(struct abuf *ab) {
-    char status[80], rightStatus[80];
-    int length = snprintf(status, sizeof(status), "\"%.20s\" - %d lines %s",
-                          activePane(&editor.display)->file->filename
-                          ? activePane(&editor.display)->file->filename
-                          : "[No name]",
-                          activePane(&editor.display)->file->numberOfRows,
-                          activePane(&editor.display)->file->unsavedChanges ? "(modified)" : "");
-    int rightLength = snprintf(
-      rightStatus, sizeof(rightStatus), "%d/%d",
-      activePane(&editor.display)->cursorY + 1,
-      activePane(&editor.display)->file->numberOfRows
-    );
-    if (length > editor.display.width) length = editor.display.width;
-    abAppend(ab, "[7m", 4);
-    abAppend(ab, status, length);
-    while (length < editor.display.width) {
-      if (editor.display.width - length == rightLength) {
-        abAppend(ab, rightStatus, rightLength);
-        break;
-      } else {
-        abAppend(ab, " ", 1);
-        length++;
-      }
-    }
-    abAppend(ab, "[27m", 5);
-    abAppend(ab, "\r\n", 2);
-  }
-
   void editorDrawWelcome(struct abuf *ab) {
     editorDrawEmpties(ab, editor.display.height / 3 - 1);
     char welcome[80];
@@ -846,7 +817,7 @@ The main function [[*Raw Mode][puts the terminal into raw mode]], reads the comm
   void editorUpdateWindowSize() {
     if (getWindowSize(&editor.display.height, &editor.display.width) == -1)
       die("getWindowSize");
-    editor.display.height -= 2;
+    editor.display.height -= 1;
   }
 
   void editorRefreshScreen() {
@@ -858,7 +829,6 @@ The main function [[*Raw Mode][puts the terminal into raw mode]], reads the comm
     abAppend(&ab, "\x1b[H", 3);
 
     editorDrawRows(&ab);
-    editorDrawStatusBar(&ab);
     editorDrawMessageBar(&ab);
     char buf[32];
     ScreenCursor c = activeCursor(&editor.display);

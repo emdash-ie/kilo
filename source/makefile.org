@@ -3,7 +3,7 @@
 The makefile showing how to compile the project.
 
 #+begin_src Makefile :tangle ../tangled/Makefile :mkdirp yes
-CFLAGS = -Wall -Wextra -pedantic -std=c17
+CFLAGS = -Wall -Wextra -pedantic -std=c17 -g
 
 common-objects = pane.o undo.o zipperBuffer.o editorRow.o \
           util.o fileData.o display.o $(patsubst %.c,%.o,$(wildcard lists/*.c)) \

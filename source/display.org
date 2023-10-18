@@ -145,9 +145,9 @@ There are also some convenience functions for creating ~DisplayColumns~ and ~Dis
     widths->tail = widths;
     List(DisplayRow) *top = ListF(DisplayRow).reverse(column->up);
     List(DisplayRow) *rows = ListF(DisplayRow).concat(
-                                                      top,
-                                                      ListF(DisplayRow).cons(column->active, column->down)
-                                                      );
+      top,
+      ListF(DisplayRow).cons(column->active, column->down)
+    );
     List(List(List(PaneRow))) *result = ListF4(DisplayRow, int, int, List(List(PaneRow)))
       .zipWith(drawDisplayRow, rows, heights, widths);
 

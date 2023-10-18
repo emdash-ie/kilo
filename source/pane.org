@@ -62,6 +62,7 @@ Questions to ask:
 
     PaneRow *makePaneRow(char *row, int width, unsigned int blanks);
 
+    PaneRow *drawStatusBar(Pane *p, int width);
 
     List(PaneRow) *paneDraw(Pane *p, int *height, int *width);
   #+end_src
@@ -90,19 +91,53 @@ Questions to ask:
       return ListF(PaneRow).cons(makePaneRow(r->renderChars + x, resultWidth, blanks), NULL);
     }
 
-    List(PaneRow) *drawPane(int height, int left, int width, RowList *rows) {
+    List(PaneRow) *drawPane(int height, int left, int width, PaneRow *status, RowList *rows) {
       if (rows == NULL || height <= 0) {
         return NULL;
+      } else if (height == 1) {
+        return ListF(PaneRow).cons(status, NULL);
       }
       List(PaneRow) *head = drawRow(left, width, rows->head);
-      List(PaneRow) *tail = drawPane(height - 1, left, width, rows->tail);
+      List(PaneRow) *tail = drawPane(height - 1, left, width, status, rows->tail);
       head->tail = tail;
       return head;
     }
 
     List(PaneRow) *paneDraw(Pane *p, int *height, int *width) {
       RowList *rows = zipperRowsFrom(p->file->buffer, p->file->cursorY, p->top);
-      return drawPane(*height, p->left, *width, rows);
+      return drawPane(*height, p->left, *width, drawStatusBar(p, *width), rows);
+    }
+
+    PaneRow *drawStatusBar(Pane *p, int width) {
+      char *status = malloc(width + 1);
+      int leftLength = snprintf(
+        status,
+        width + 1,
+        "\"%.20s\" - %d lines %s",
+        p->file->filename ? p->file->filename : "[No name]",
+        p->file->numberOfRows,
+        p->file->unsavedChanges ? "(modified)" : ""
+      );
+      char *rightStatus = malloc(width + 1);
+      int rightLength = snprintf(
+        rightStatus,
+        width + 1,
+        "%d/%d",
+        p->cursorY + 1,
+        p->file->numberOfRows
+      );
+      int numberOfBlanks = width - (leftLength + rightLength);
+      for (int i = leftLength; i < leftLength + numberOfBlanks; i++) {
+        status[i] = ' ';
+      }
+      snprintf(
+        status + leftLength + numberOfBlanks,
+        rightLength,
+        "%s",
+        rightStatus
+      );
+      free(rightStatus);
+      return makePaneRow(status, width, 0);
     }
 
     PaneRow *makePaneRow(char *row, int width, unsigned int blanks) {
