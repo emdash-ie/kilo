@@ -745,6 +745,7 @@ The main function [[*Raw Mode][puts the terminal into raw mode]], reads the comm
       activePane(&editor.display)->file->numberOfRows
     );
     if (length > editor.display.width) length = editor.display.width;
+    abAppend(ab, "[7m", 4);
     abAppend(ab, status, length);
     while (length < editor.display.width) {
       if (editor.display.width - length == rightLength) {
@@ -755,6 +756,7 @@ The main function [[*Raw Mode][puts the terminal into raw mode]], reads the comm
         length++;
       }
     }
+    abAppend(ab, "[27m", 5);
     abAppend(ab, "\r\n", 2);
   }
 
