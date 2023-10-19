@@ -1,0 +1,119 @@
+#+begin_src c :tangle main.c
+  #define MUNIT_ENABLE_ASSERT_ALIASES
+  #include "munit/munit.h"
+
+  #include "../tangled/editorRow.h"
+  #include "../tangled/pane.h"
+  #include "../tangled/lists/PaneRow.h"
+
+  MunitResult testNewRow(const MunitParameter params[], void *userDataOrFixture) {
+    // If the input string doesn’t contain tabs, renderChars and renderSize
+    // should be the same as chars and size.
+    EditorRow *r = newRow("hello there you", 15, 0);
+    assert_string_equal(r->chars, r->renderChars);
+    assert_int(r->size, ==, r->renderSize);
+    return MUNIT_OK;
+  }
+
+  MunitResult testDrawRowFull(const MunitParameter params[], void *userDataOrFixture) {
+    EditorRow *r = newRow("hello there you", 15, 0);
+
+    List(PaneRow) *pr = drawRow(0, 15, r);
+    assert_string_equal("hello there you", pr->head->row);
+    assert_int(15, ==, pr->head->width);
+
+    return MUNIT_OK;
+  }
+
+  MunitResult testDrawRowShort(const MunitParameter params[], void *userDataOrFixture) {
+    EditorRow *r = newRow("hello there you", 15, 0);
+
+    List(PaneRow) *prShort = drawRow(0, 14, r);
+    assert_string_equal("hello there you", prShort->head->row);
+    assert_int(14, ==, prShort->head->width);
+
+    return MUNIT_OK;
+  }
+
+  MunitResult testDrawRowShorter(const MunitParameter params[], void *userDataOrFixture) {
+    EditorRow *r = newRow("hello there you", 15, 0);
+
+    List(PaneRow) *prShorter = drawRow(8, 12, r);
+    assert_string_equal("ere you", prShorter->head->row);
+    assert_int(7, ==, prShorter->head->width);
+
+    return MUNIT_OK;
+  }
+
+  MunitTest editorRowTests[] = {
+    {
+      "/newRow",
+      testNewRow,
+      NULL, /* setup */
+      NULL, /* tear_down */
+      MUNIT_TEST_OPTION_NONE,
+      NULL /* parameters */
+    },
+    { NULL, NULL, NULL, NULL, MUNIT_TEST_OPTION_NONE, NULL }
+  };
+
+  MunitTest drawRowTests[] = {
+    {
+      "/fullLength",
+      testDrawRowFull,
+      NULL, /* setup */
+      NULL, /* tear_down */
+      MUNIT_TEST_OPTION_NONE,
+      NULL /* parameters */
+    },
+    {
+      "/short",
+      testDrawRowShort,
+      NULL, /* setup */
+      NULL, /* tear_down */
+      MUNIT_TEST_OPTION_NONE,
+      NULL /* parameters */
+    },
+    {
+      "/shorter",
+      testDrawRowShorter,
+      NULL, /* setup */
+      NULL, /* tear_down */
+      MUNIT_TEST_OPTION_NONE,
+      NULL /* parameters */
+    },
+    /* Mark the end of the array with an entry where the test
+     ,* function is NULL */
+    { NULL, NULL, NULL, NULL, MUNIT_TEST_OPTION_NONE, NULL }
+  };
+
+  MunitSuite suites[] = {
+    {
+      "/drawRow",
+      drawRowTests,
+      NULL, /* suites */
+      1, /* iterations */
+      MUNIT_SUITE_OPTION_NONE
+    },
+    {
+      "/editorRow",
+      editorRowTests,
+      NULL, /* suites */
+      1, /* iterations */
+      MUNIT_SUITE_OPTION_NONE
+    },
+    { NULL, NULL, NULL, 0, MUNIT_SUITE_OPTION_NONE }
+  };
+
+  MunitSuite suite = {
+    "/kibi",
+    NULL,
+    suites, /* suites */
+    1, /* iterations */
+    MUNIT_SUITE_OPTION_NONE
+  };
+
+  int main (int argc, const char* argv[]) {
+    return munit_suite_main(&suite, NULL, argc, argv);
+  }
+#+end_src

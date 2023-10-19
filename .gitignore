@@ -3,3 +3,6 @@
 /zipperBuffer
 /kibi
 *.o
+/Makefile
+/run-tests
+/test/*.c

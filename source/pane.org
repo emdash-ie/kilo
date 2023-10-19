@@ -65,6 +65,8 @@ Questions to ask:
     PaneRow *drawStatusBar(Pane *p, int width);
 
     List(PaneRow) *paneDraw(Pane *p, int *height, int *width);
+
+    List(PaneRow) *drawRow(int left, int width, EditorRow *r);
   #+end_src
 * Body
   #+begin_src C :tangle ../tangled/pane.c :main no

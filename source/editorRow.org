@@ -8,12 +8,13 @@
     typedef struct EditorRow EditorRow;
 
     struct EditorRow {
-      int size;
+      int size; // not including ending null
       char *chars;
-      int renderSize;
+      int renderSize; // not including ending null
       char *renderChars;
     };
 
+    /* length should not include the terminating null */
     EditorRow *newRow(char *s, size_t length, int tabSize);
 
     int editorCursorToRender(EditorRow *row, int cursorX, int tabSize);
@@ -33,6 +34,7 @@
     #include <string.h>
     #include "editorRow.h"
 
+    /* length should not include the terminating null */
     EditorRow *newRow(char *s, size_t length, int tabSize) {
       EditorRow *row = malloc(sizeof(*row));
       row->size = length;

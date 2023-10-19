@@ -1,0 +1,35 @@
+#+Title: Makefile
+
+The makefile showing how to compile the project.
+
+#+begin_src makefile :tangle Makefile :mkdirp yes
+  CFLAGS = -Wall -Wextra -pedantic -std=c17 -g
+
+  main-objects = tangled/kibi.o tangled/rope.o test/main.o
+
+  source-objects = $(filter-out $(main-objects),$(patsubst %.c,%.o,$(wildcard tangled/*.c)) \
+  		$(patsubst %.c,%.o,$(wildcard tangled/lists/*.c)))
+
+  test-objects = test/main.o \
+  	test/munit/munit.o \
+  		$(source-objects)
+
+  all-objects = $(main-objects) $(source-objects) $(test-objects)
+
+  test : $(test-objects)
+  	cc $(CFLAGS) -o run-tests $(test-objects)
+
+  kibi : tangled/kibi.o $(source-objects)
+  	cc $(CFLAGS) -o kibi tangled/kibi.o $(source-objects)
+
+  test/main.o: test/munit/munit.h tangled/editorRow.h tangled/pane.h tangled/lists/PaneRow.h
+  tangled/kibi.o: tangled/kibi.c tangled/editorRow.h tangled/fileData.h tangled/pane.h tangled/undo.h tangled/zipperBuffer.h tangled/display.h tangled/edit.h
+  tangled/zipperBuffer.o: tangled/zipperBuffer.c tangled/editorRow.h
+  tangled/pane.o: tangled/pane.c tangled/editorRow.h tangled/util.h tangled/zipperBuffer.h tangled/fileData.h
+  tangled/fileData.o: tangled/fileData.c tangled/undo.h tangled/zipperBuffer.h
+  tangled/display.o: tangled/display.c tangled/pane.h
+
+  .PHONY : clean
+  clean :
+  	rm kibi run-tests $(all-objects)
+#+end_src
