@@ -134,7 +134,7 @@ Questions to ask:
       }
       snprintf(
         status + leftLength + numberOfBlanks,
-        rightLength,
+        rightLength + 1,
         "%s",
         rightStatus
       );
