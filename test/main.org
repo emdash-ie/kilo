@@ -1,50 +1,20 @@
-#+begin_src c :tangle main.c
-  #define MUNIT_ENABLE_ASSERT_ALIASES
-  #include "munit/munit.h"
+* newRow
+:PROPERTIES:
+:header-args: :noweb-ref newRowTests
+:END:
 
-  #include "../tangled/editorRow.h"
-  #include "../tangled/pane.h"
-  #include "../tangled/lists/PaneRow.h"
+If the input string doesn’t contain tabs, renderChars and renderSize should be the same as chars and size.
 
-  MunitResult testNewRow(const MunitParameter params[], void *userDataOrFixture) {
-    // If the input string doesn’t contain tabs, renderChars and renderSize
-    // should be the same as chars and size.
+#+begin_src c
+  MunitResult testNewRow() {
     EditorRow *r = newRow("hello there you", 15, 0);
     assert_string_equal(r->chars, r->renderChars);
     assert_int(r->size, ==, r->renderSize);
     return MUNIT_OK;
   }
+#+end_src
 
-  MunitResult testDrawRowFull(const MunitParameter params[], void *userDataOrFixture) {
-    EditorRow *r = newRow("hello there you", 15, 0);
-
-    List(PaneRow) *pr = drawRow(0, 15, r);
-    assert_string_equal("hello there you", pr->head->row);
-    assert_int(15, ==, pr->head->width);
-
-    return MUNIT_OK;
-  }
-
-  MunitResult testDrawRowShort(const MunitParameter params[], void *userDataOrFixture) {
-    EditorRow *r = newRow("hello there you", 15, 0);
-
-    List(PaneRow) *prShort = drawRow(0, 14, r);
-    assert_string_equal("hello there you", prShort->head->row);
-    assert_int(14, ==, prShort->head->width);
-
-    return MUNIT_OK;
-  }
-
-  MunitResult testDrawRowShorter(const MunitParameter params[], void *userDataOrFixture) {
-    EditorRow *r = newRow("hello there you", 15, 0);
-
-    List(PaneRow) *prShorter = drawRow(8, 12, r);
-    assert_string_equal("ere you", prShorter->head->row);
-    assert_int(7, ==, prShorter->head->width);
-
-    return MUNIT_OK;
-  }
-
+#+begin_src c
   MunitTest editorRowTests[] = {
     {
       "/newRow",
@@ -56,7 +26,58 @@
     },
     { NULL, NULL, NULL, NULL, MUNIT_TEST_OPTION_NONE, NULL }
   };
+#+end_src
 
+* drawRow
+:PROPERTIES:
+:header-args: :noweb-ref drawRowTests
+:END:
+
+Calling ~drawRow~ with the full length of the string and an offset (~left~ value) of 0 should give a ~PaneRow~ containing a copy of the string.
+
+#+begin_src c
+  MunitResult testDrawRowFull() {
+    EditorRow *r = newRow("hello there you", 15, 0);
+
+    List(PaneRow) *pr = drawRow(0, 15, r);
+    assert_string_equal("hello there you", pr->head->row);
+    assert_int(15, ==, pr->head->width);
+
+    return MUNIT_OK;
+  }
+#+end_src
+
+Calling it with a shorter length and zero offset should still give a ~PaneRow~ with copy of the string, but it should have a shorter width.
+
+#+begin_src c
+  MunitResult testDrawRowShort() {
+    EditorRow *r = newRow("hello there you", 15, 0);
+
+    List(PaneRow) *prShort = drawRow(0, 14, r);
+    assert_string_equal("hello there you", prShort->head->row);
+    assert_int(14, ==, prShort->head->width);
+
+    return MUNIT_OK;
+  }
+#+end_src
+
+Increasing the offset should shorten the copy from the front.
+
+#+begin_src c
+  MunitResult testDrawRowShorter() {
+    EditorRow *r = newRow("hello there you", 15, 0);
+
+    List(PaneRow) *prShorter = drawRow(8, 12, r);
+    assert_string_equal("ere you", prShorter->head->row);
+    assert_int(7, ==, prShorter->head->width);
+
+    return MUNIT_OK;
+  }
+#+end_src
+
+This variable just gathers the tests together.
+
+#+begin_src c
   MunitTest drawRowTests[] = {
     {
       "/fullLength",
@@ -86,6 +107,23 @@
      ,* function is NULL */
     { NULL, NULL, NULL, NULL, MUNIT_TEST_OPTION_NONE, NULL }
   };
+#+end_src
+
+* Test main file
+
+#+begin_src c :tangle main.c :noweb yes
+  #define MUNIT_ENABLE_ASSERT_ALIASES
+  #include "munit/munit.h"
+
+  #include "../tangled/editorRow.h"
+  #include "../tangled/pane.h"
+  #include "../tangled/lists/PaneRow.h"
+
+  #include "display.c"
+
+  <<newRowTests>>
+
+  <<drawRowTests>>
 
   MunitSuite suites[] = {
     {
@@ -100,6 +138,13 @@
       editorRowTests,
       NULL, /* suites */
       1, /* iterations */
+      MUNIT_SUITE_OPTION_NONE
+    },
+    {
+      "/display",
+      displayTests,
+      NULL,
+      1,
       MUNIT_SUITE_OPTION_NONE
     },
     { NULL, NULL, NULL, 0, MUNIT_SUITE_OPTION_NONE }

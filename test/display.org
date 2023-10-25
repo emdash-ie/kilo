@@ -1,0 +1,175 @@
+#+title: Display Tests
+
+This file contains tests for [[../source/display.org][display.org]].
+
+* Tests
+:PROPERTIES:
+:header-args: :noweb-ref tests
+:END:
+
+When ~drawDisplayColumn~ is called with a ~DisplayColumn~ containing one pane, and a height and width that can hold the contents of that pane, the results should contain the whole contents of the pane.
+
+#+begin_src c
+  MunitResult singlePaneColumn() {
+    char *strings[5] = {
+      "That's great, it starts with an earthquake.",
+      "Birds and snakes, an aeroplane.",
+      "Lenny Bruce is not afraid.",
+      "Eye of a hurricane, listen to yourself churn,",
+      "World serves its own needs, dummy serve your own needs"
+    };
+    int lengths[5] = {43, 31, 26, 45, 54};
+    int maxLength = 0;
+    int summedLength = 0;
+    RowList *rows = NULL;
+    for (int i = 4; i >= 0; i--) {
+      rows = rowListCons(newRow(strings[i], lengths[i], 0), rows);
+      if (lengths[i] > maxLength) {
+        maxLength = lengths[i];
+      }
+      summedLength += lengths[i];
+    }
+
+    ZipperBuffer *zb = malloc(sizeof(*zb));
+    zb->forwards = rows;
+    zb->backwards = NULL;
+    zb->newest = NULL;
+    FileData *f = fileData(0, 0, 5, zb, "test-file.txt", 0, NULL, NULL);
+    Pane *p = makePane(0, 0, 0, 0, f);
+    DisplayRow *row = makeDisplayRow(NULL, p, NULL);
+    DisplayColumn *column = makeDisplayColumn(NULL, row, NULL);
+
+    char screen[350];
+    concatPaneRows(screen, drawDisplayColumn(column, 6, maxLength));
+    assert_int(strlen(screen), ==, (summedLength + maxLength));
+    char line[maxLength];
+    char *j = screen;
+    for (int i = 0; i < 5; i++) {
+      memcpy(line, j, lengths[i]);
+      line[lengths[i]] = '\0';
+      assert_string_equal(line, strings[i]);
+      j += lengths[i];
+    }
+    return MUNIT_OK;
+  }
+#+end_src
+
+With two panes in the column and enough height and width, we should see the contents twice:
+
+#+begin_src c
+  MunitResult doublePaneColumn() {
+    char *strings[5] = {
+      "That's great, it starts with an earthquake.",
+      "Birds and snakes, an aeroplane.",
+      "Lenny Bruce is not afraid.",
+      "Eye of a hurricane, listen to yourself churn,",
+      "World serves its own needs, dummy serve your own needs"
+    };
+    int lengths[5] = {43, 31, 26, 45, 54};
+    int maxLength = 0;
+    int summedLength = 0;
+    RowList *rows = NULL;
+    for (int i = 4; i >= 0; i--) {
+      rows = rowListCons(newRow(strings[i], lengths[i], 0), rows);
+      if (lengths[i] > maxLength) {
+        maxLength = lengths[i];
+      }
+      summedLength += lengths[i];
+    }
+
+    ZipperBuffer *zb = malloc(sizeof(*zb));
+    zb->forwards = rows;
+    zb->backwards = NULL;
+    zb->newest = NULL;
+    FileData *f = fileData(0, 0, 5, zb, "test-file.txt", 0, NULL, NULL);
+    Pane *p1 = makePane(0, 0, 0, 0, f);
+    ZipperBuffer *zb2 = malloc(sizeof(*zb));
+    zb2->forwards = rows;
+    zb2->backwards = NULL;
+    zb2->newest = NULL;
+    FileData *f2 = fileData(0, 0, 5, zb2, "test-file.txt", 0, NULL, NULL);
+    Pane *p2 = makePane(0, 0, 0, 0, f2);
+    DisplayRow *row1 = makeDisplayRow(NULL, p1, NULL);
+    DisplayRow *row2 = makeDisplayRow(NULL, p2, NULL);
+    DisplayColumn *column = makeDisplayColumn(NULL, row1, ListF(DisplayRow).cons(row2, NULL));
+
+    char screen[700];
+    concatPaneRows(screen, drawDisplayColumn(column, 12, maxLength));
+    assert_int(strlen(screen), ==, (2 * (summedLength + maxLength)));
+    char line[maxLength];
+    char *j = screen;
+    for (int i = 0; i < 5; i++) {
+      memcpy(line, j, lengths[i]);
+      line[lengths[i]] = '\0';
+      assert_string_equal(line, strings[i]);
+      j += lengths[i];
+    }
+    j += maxLength;
+    for (int i = 0; i < 5; i++) {
+      memcpy(line, j, lengths[i]);
+      line[lengths[i]] = '\0';
+      assert_string_equal(line, strings[i]);
+      j += lengths[i];
+    }
+    return MUNIT_OK;
+  }
+#+end_src
+
+* Utilities
+:PROPERTIES:
+:header-args: :noweb-ref utilities
+:END:
+
+#+begin_src c
+  void concatPaneRows(char *destination, List(List(List(PaneRow))) *paneRows) {
+    int i = 0;
+    for (; paneRows != NULL; paneRows = paneRows->tail) {
+      for (List(List(PaneRow)) *paneRows2 = paneRows->head; paneRows2 != NULL; paneRows2 = paneRows2->tail) {
+        for (List(PaneRow) *paneRows3 = paneRows2->head; paneRows3 != NULL; paneRows3 = paneRows3->tail) {
+          PaneRow *r = paneRows3->head;
+          memcpy(destination + i, r->row, r->width);
+          i += r->width;
+        }
+      }
+    }
+    destination[i] = '\0';
+  }
+#+end_src
+
+* Export (Test Array)
+
+#+begin_src c :tangle display.c :noweb yes
+  #define MUNIT_ENABLE_ASSERT_ALIASES
+  #include "munit/munit.h"
+
+  #include <string.h>
+
+  #include "../tangled/display.h"
+  #include "../tangled/lists/DisplayRow.h"
+  #include "../tangled/lists/PaneRow.h"
+  #include "../tangled/lists/ListPaneRow.h"
+  #include "../tangled/lists/ListListPaneRow.h"
+
+  <<utilities>>
+
+  <<tests>>
+
+  MunitTest displayTests[] = {
+    {
+      "/singlePaneColumn",
+      singlePaneColumn,
+      NULL,
+      NULL,
+      MUNIT_TEST_OPTION_NONE,
+      NULL
+    },
+    {
+      "/doublePaneColumn",
+      doublePaneColumn,
+      NULL,
+      NULL,
+      MUNIT_TEST_OPTION_NONE,
+      NULL
+    }
+  };
+#+end_src

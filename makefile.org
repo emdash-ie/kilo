@@ -16,13 +16,13 @@ The makefile showing how to compile the project.
 
   all-objects = $(main-objects) $(source-objects) $(test-objects)
 
-  test : $(test-objects)
+  test : $(test-objects) test/display.o
   	cc $(CFLAGS) -o run-tests $(test-objects)
 
   kibi : tangled/kibi.o $(source-objects)
   	cc $(CFLAGS) -o kibi tangled/kibi.o $(source-objects)
 
-  test/main.o: test/munit/munit.h tangled/editorRow.h tangled/pane.h tangled/lists/PaneRow.h
+  test/main.o: test/munit/munit.h tangled/editorRow.h tangled/pane.h tangled/lists/PaneRow.h test/display.c
   tangled/kibi.o: tangled/kibi.c tangled/editorRow.h tangled/fileData.h tangled/pane.h tangled/undo.h tangled/zipperBuffer.h tangled/display.h tangled/edit.h
   tangled/zipperBuffer.o: tangled/zipperBuffer.c tangled/editorRow.h
   tangled/pane.o: tangled/pane.c tangled/editorRow.h tangled/util.h tangled/zipperBuffer.h tangled/fileData.h
