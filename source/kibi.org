@@ -715,7 +715,6 @@ The main function [[*Raw Mode][puts the terminal into raw mode]], reads the comm
   }
 
   void editorDrawNewline(struct abuf *ab) {
-    abAppend(ab, "\x1b[K", 3);
     abAppend(ab, "\r\n", 2);
   }
 
