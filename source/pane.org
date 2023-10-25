@@ -94,15 +94,22 @@ Questions to ask:
     }
 
     List(PaneRow) *drawPane(int height, int left, int width, PaneRow *status, RowList *rows) {
-      if (rows == NULL || height <= 0) {
+      if (height <= 0) {
         return NULL;
       } else if (height == 1) {
         return ListF(PaneRow).cons(status, NULL);
+      } else if (rows == NULL) {
+        List(PaneRow) *head = ListF(PaneRow).cons(
+          makePaneRow("", width, width),
+          drawPane(height - 1, left, width, status, NULL)
+        );
+        return head;
+      } else {
+        List(PaneRow) *head = drawRow(left, width, rows->head);
+        List(PaneRow) *tail = drawPane(height - 1, left, width, status, rows->tail);
+        head->tail = tail;
+        return head;
       }
-      List(PaneRow) *head = drawRow(left, width, rows->head);
-      List(PaneRow) *tail = drawPane(height - 1, left, width, status, rows->tail);
-      head->tail = tail;
-      return head;
     }
 
     List(PaneRow) *paneDraw(Pane *p, int *height, int *width) {
