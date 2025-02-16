@@ -2,48 +2,18 @@
 
 A string type that includes its length.
 
-#+name: StringType
-#+begin_src C
-  struct String {
-    char *s;
-    size_t length;
-  };
-#+end_src
+#+include: "./string.h" :lines "3-7" src c
 
 Can create it from regular strings by calculating the length on creation:
 
-#+name: MakeStringPrototype
-#+begin_src C
-  struct String makeString(char *s);
-#+end_src
+#+include: "./string.h" :lines "8-9" src c
 
-#+name: MakeString
-#+begin_src C
-  struct String makeString(char *s) {
-    size_t length = strlen(s);
-    return (struct String){.s = s, .length = length};
-  }
-#+end_src
+#+include: "./string.c" :lines "3-" src c
 
-* Header
+Need ~<stddef.h>~ in the header for ~size_t~.
 
-Need ~<stddef.h>~ for ~size_t~.
+#+include: "./string.h" :lines "1-2" src c
 
-#+begin_src C :noweb yes :tangle ../tangled/string.h :main no
-  #include <stddef.h>
+Need ~<string.h>~ in the body for ~strlen~.
 
-  <<StringType>>
-
-  <<MakeStringPrototype>>
-#+end_src
-
-* Body
-
-Need ~<string.h>~ for ~strlen~.
-
-#+begin_src C :noweb yes :tangle ../tangled/string.c :main no
-  #include "string.h"
-  #include <string.h>
-
-  <<MakeString>>
-#+end_src
+#+include: "./string.c" :lines "2-3" src c

@@ -144,11 +144,11 @@ With two panes in the column and enough height and width, we should see the cont
 
   #include <string.h>
 
-  #include "../tangled/display.h"
-  #include "../tangled/lists/DisplayRow.h"
-  #include "../tangled/lists/PaneRow.h"
-  #include "../tangled/lists/ListPaneRow.h"
-  #include "../tangled/lists/ListListPaneRow.h"
+  #include "../source/display.h"
+  #include "../source/lists/DisplayRow.h"
+  #include "../source/lists/PaneRow.h"
+  #include "../source/lists/ListPaneRow.h"
+  #include "../source/lists/ListListPaneRow.h"
 
   <<utilities>>
 

@@ -115,9 +115,9 @@ This variable just gathers the tests together.
   #define MUNIT_ENABLE_ASSERT_ALIASES
   #include "munit/munit.h"
 
-  #include "../tangled/editorRow.h"
-  #include "../tangled/pane.h"
-  #include "../tangled/lists/PaneRow.h"
+  #include "../source/editorRow.h"
+  #include "../source/pane.h"
+  #include "../source/lists/PaneRow.h"
 
   #include "display.c"
 

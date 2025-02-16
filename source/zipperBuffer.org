@@ -1,351 +1,46 @@
 #+Title: ZipperBuffer
 
-A representation of buffers (in-memory data from files) as a zipper (two linked
-lists, one holding the line the cursor is on and the lines after it, and one
-holding the lines before it in reverse order).
+A representation of buffers (in-memory data from files) as a zipper (two linked lists, one holding the line the cursor is on and the lines after it, and one holding the lines before it in reverse order).
 
-#+name: zipperbuffer-type
-#+begin_src C
-  typedef struct ZipperBuffer ZipperBuffer;
+#+include: "./zipperBuffer.h" :lines "33-40" src c
 
-  struct ZipperBuffer {
-    RowList *forwards;
-    RowList *backwards;
-    RowList *newest;
-  };
-#+end_src
+The idea behind using a zipper like this was that it would enable scrolling easily (by unconsing off one list and consing onto the other), but still be a persistent data structure so that an undo functionality could be implemented by holding on to old copies of the zipper. (~newest~ is used for memory management – that’ll be explained shortly.)
 
-The idea behind using a zipper like this was that it would enable scrolling
-easily (by unconsing off one list and consing onto the other), but still be a
-persistent data structure so that an undo functionality could be implemented by
-holding on to old copies of the zipper. (~newest~ is used for memory management
-– that’ll be explained shortly.)
+A ~RowList~ is a singly-linked list of ~EditorRows~. (~number~ is used along with ~newest~.)
 
-A ~RowList~ is a singly-linked list of ~EditorRows~. (~number~ is used along
-with ~newest~.)
+#+include: "./zipperBuffer.h" :lines "9-16" src c
 
-#+name: rowlist-type
-#+begin_src C
-  typedef struct RowList RowList;
+To construct ~RowLists~, there is ~rowListCons~, which combines a head and a tail. It also initialises ~number~, incrementing ~rowListId~ to give each cons cell a unique ID.
 
-  struct RowList {
-    EditorRow *head;
-    RowList *tail;
-    int number;
-  };
-#+end_src
+#+include: "./zipperBuffer.c" :lines "15-24" src c
 
-To construct ~RowLists~, there is ~rowListCons~, which combines a head and a
-tail. It also initialises ~number~, incrementing ~rowListId~ to give each cons
-cell a unique ID.
+Since the implementation of the undo functionality holds onto old rowlists, those can’t be freed as the user scrolls: if the user scrolls down a line and the popped cons cell is freed, an undo might dereference an invalid pointer.
 
-#+name: rowListCons-definition
-#+begin_src C
-  int rowListId = 0;
+However, scrolling isn’t an edit from the user’s perspective, so it doesn’t need to be possible to undo or redo it. Therefore, the newest thing that might be in the undo history is the newer of ~(backwards, forwards)~ just after the last edit.
 
-  RowList *rowListCons(EditorRow *head, RowList *tail) {
-    RowList *rowList = malloc(sizeof(RowList));
-    rowList->head = head;
-    rowList->tail = tail;
-    rowList->number = rowListId++;
-    return rowList;
-  }
-#+end_src
+#+include: "./zipperBuffer.c" :lines "121-129" src c
 
-Since the implementation of the undo functionality holds onto old rowlists,
-those can’t be freed as the user scrolls: if the user scrolls down a line and
-the popped cons cell is freed, an undo might dereference an invalid pointer.
+#+include: "./zipperBuffer.c" :lines "25-37" src c
 
-However, scrolling isn’t an edit from the user’s perspective, so it doesn’t need
-to be possible to undo or redo it. Therefore, the newest thing that might be in
-the undo history is the newer of ~(backwards, forwards)~ just after the last
-edit.
+Question to answer: in ~rowListNewer~, what’s the thinking behind the treatment of ~NULL~? It seems weird that ~NULL~ would be newer than itself, but it looks like a deliberate choice. (Everything else being newer than ~NULL~ seems reasonable.)
 
-#+name: zipperUpdateNewest-definition
-#+begin_src C
-  void zipperUpdateNewest(ZipperBuffer *buffer) {
-    RowList *thisNewest = rowListNewer(buffer->forwards, buffer->backwards)
-      ? buffer->forwards
-      : buffer->backwards;
-    buffer->newest = rowListNewer(thisNewest, buffer->newest)
-      ? thisNewest
-      : buffer->newest;
-  }
-#+end_src
+This means when scrolling (forwards or backwards), anything newer than ~newest~ can be freed:
 
-#+name: rowListNewer-definition
-#+begin_src C
-  /**
-   * True if x is newer than y, false otherwise.
-   */
-  bool rowListNewer(RowList *x, RowList *y) {
-    if (y == NULL) {
-      return true;
-    } else if (x == NULL) {
-      return false;
-    } else {
-      return x->number > y->number;
-    }
-  }
-#+end_src
+#+include: "./zipperBuffer.c" :lines "60-72" src c
 
-Question to answer: in ~rowListNewer~, what’s the thinking behind the treatment
-of ~NULL~? It seems weird that ~NULL~ would be newer than itself, but it looks
-like a deliberate choice. (Everything else being newer than ~NULL~ seems
-reasonable.)
+#+include: "./zipperBuffer.c" :lines "79-91" src c
 
-This means when scrolling (forwards or backwards), anything newer than ~newest~
-can be freed:
+#+include: "./zipperBuffer.c" :lines "73-78" src c
 
-#+name: zipperForwardRow-definition
-#+begin_src C
-  void zipperForwardRow(ZipperBuffer *buffer) {
-    if (buffer->forwards == NULL) return;
-    RowList *oldForwards = buffer->forwards;
-    RowList *newForwards = buffer->forwards->tail;
-    RowList *oldBackwards = buffer->backwards;
-    RowList *newBackwards = rowListCons(oldForwards->head, oldBackwards);
-    if (rowListNewer(oldForwards, buffer->newest)) {
-      free(oldForwards);
-    }
-    buffer->forwards = newForwards;
-    buffer->backwards = newBackwards;
-  }
-#+end_src
-
-#+name: zipperBackwardRow-definition
-#+begin_src C
-  void zipperBackwardRow(ZipperBuffer *buffer) {
-    if (buffer->backwards == NULL) return;
-    RowList *oldBackwards = buffer->backwards;
-    RowList *newBackwards = buffer->backwards->tail;
-    RowList *oldForwards = buffer->forwards;
-    RowList *newForwards = rowListCons(oldBackwards->head, oldForwards);
-    if (rowListNewer(oldBackwards, buffer->newest)) {
-      free(oldBackwards);
-    }
-    buffer->forwards = newForwards;
-    buffer->backwards = newBackwards;
-  }
-#+end_src
-
-#+name: zipperForwardN-definition
-#+begin_src C
-  void zipperForwardN(ZipperBuffer *buffer, int n) {
-    for (;n > 0; n--) {
-      zipperForwardRow(buffer);
-    }
-  }
-#+end_src
-
-#+name: zipperBackwardN-definition
-#+begin_src C
-  void zipperBackwardN(ZipperBuffer *buffer, int n) {
-    for (;n > 0; n--) {
-      zipperBackwardRow(buffer);
-    }
-  }
-#+end_src
+#+include: "./zipperBuffer.c" :lines "92-97" src c
 
 Inserting content is straightforward: create a cons cell with the new row and the current ~forward~ list, update the buffer’s ~forwards~ pointer, and update ~newest~.
 
-#+name: zipperInsertRow-definition
-#+begin_src C
-  void zipperInsertRow(ZipperBuffer *buffer, EditorRow *r) {
-    RowList *oldForwards = buffer->forwards;
-    RowList *newForwards = rowListCons(r, oldForwards);
-    buffer->forwards = newForwards;
-    buffer->newest = newForwards;
-  }
-#+end_src
+#+include: "./zipperBuffer.c" :lines "98-104" src c
 
 In order to display content on the screen, it’s helpful to get the lines from a certain point (e.g. the top of the screen). If the index is at or in front of the cursor, just drop ~index~ rows. Otherwise, scroll backwards until it is (remembering to update ~newest~ – now that these lines are being used by other code, they can’t be freed on scroll), and then scroll forward again.
 
-#+name: zipperRowsFrom-definitions
-#+begin_src C
-  RowList *zipperRowsFromRelative(ZipperBuffer *buffer, int n) {
-    if (n >= 0) {
-      return rowListDrop(buffer->forwards, n);
-    } else {
-      zipperBackwardN(buffer, -n);
-      RowList *rows = buffer->forwards;
-      zipperUpdateNewest(buffer);
-      zipperForwardN(buffer, -n);
-      return rows;
-    }
-  }
+#+include: "./zipperBuffer.c" :lines "105-120" src c
 
-  RowList *zipperRowsFrom(ZipperBuffer *buffer, int cursorY, int n) {
-    return zipperRowsFromRelative(buffer, n - cursorY);
-  }
-#+end_src
+#+include: "./zipperBuffer.c" :lines "7-14" src c
 
-#+name: rowListDrop-definition
-#+begin_src C
-  RowList *rowListDrop(RowList *list, int n) {
-    if (n <= 0) {
-      return list;
-    } else {
-      return rowListDrop(list->tail, n - 1);
-    }
-  }
-#+end_src
-
-* Header
-  #+begin_src C :tangle ../tangled/zipperBuffer.h :mkdirp yes :noweb yes :main no
-    #ifndef ZIPPER_BUFFER
-    #define ZIPPER_BUFFER
-
-    #include <stdlib.h>
-    #include <stdbool.h>
-    #include <stdio.h>
-    #include "editorRow.h"
-
-    <<rowlist-type>>
-
-    RowList *rowListCons(EditorRow *head, RowList *tail);
-
-    RowList *rowListDrop(RowList *list, int n);
-
-    /**
-     ,* True if x is newer than y, false otherwise.
-     ,*/
-    bool rowListNewer(RowList *x, RowList *y);
-
-    void updateRowList(RowList *toUpdate, EditorRow *newHead, RowList *newTail);
-
-    /**
-     ,* Reverses a RowList by mutating it. Returns the new head.
-     ,*/
-    RowList *rowListReverse(RowList *rows);
-
-    <<zipperbuffer-type>>
-    
-    void zipperForwardRow(ZipperBuffer *buffer);
-
-    void zipperForwardN(ZipperBuffer *buffer, int n);
-
-    void zipperBackwardRow(ZipperBuffer *buffer);
-
-    void zipperBackwardN(ZipperBuffer *buffer, int n);
-
-    void zipperInsertRow(ZipperBuffer *buffer, EditorRow *r);
-
-    RowList *zipperRowsFrom(ZipperBuffer *buffer, int cursorY, int n);
-
-    void zipperUpdateNewest(ZipperBuffer *buffer);
-
-    void printRowList(RowList *list);
-
-    void printZipperBuffer(ZipperBuffer *buffer);
-
-    ZipperBuffer *exampleBuffer();
-
-    int testZipperBuffer();
-
-    #endif
-  #+end_src
-* Body
-  #+begin_src C :tangle ../tangled/zipperBuffer.c :mkdirp yes :noweb yes :main no
-    #include <stdlib.h>
-    #include <stdbool.h>
-    #include <stdio.h>
-    #include "editorRow.h"
-    #include "zipperBuffer.h"
-
-    <<rowListDrop-definition>>
-
-    <<rowListCons-definition>>
-
-    <<rowListNewer-definition>>
-
-    void updateRowList(RowList *toUpdate, EditorRow *newHead, RowList *newTail) {
-      if (toUpdate == NULL) return;
-      toUpdate->head = newHead;
-      toUpdate->tail = newTail;
-      toUpdate->number = rowListId++;
-    }
-
-    /**
-     ,* Reverses a RowList in-place. Returns the new head.
-     ,*/
-    RowList *rowListReverse(RowList *rows) {
-      RowList *last = NULL;
-      RowList *next = NULL;
-      while (rows != NULL) {
-        next = rows->tail;
-        rows->tail = last;
-        last = rows;
-        rows = next;
-      }
-      return last;
-    }
-
-    <<zipperForwardRow-definition>>
-
-    <<zipperForwardN-definition>>
-
-    <<zipperBackwardRow-definition>>
-
-    <<zipperBackwardN-definition>>
-
-    <<zipperInsertRow-definition>>
-
-    <<zipperRowsFrom-definitions>>
-
-    <<zipperUpdateNewest-definition>>
-
-    void printRowList(RowList *list) {
-      int i = 1;
-      while (list != NULL) {
-        printf("%d: %s\n", i, list->head->chars);
-        list = list->tail;
-        i++;
-      }
-    }
-
-    void printZipperBuffer(ZipperBuffer *buffer) {
-      printf("Backwards:\n");
-      printRowList(buffer->backwards);
-      printf("Forwards:\n");
-      printRowList(buffer->forwards);
-    }
-
-    ZipperBuffer *exampleBuffer() {
-      /* EditorRow *first = newRow("That's great, it starts with an earthquake.", 0); */
-      /* EditorRow *second = newRow("Birds and snakes, an aeroplane.", 0); */
-      /* EditorRow *third = newRow("Lenny Bruce is not afraid.", 0); */
-      /* EditorRow *fourth = newRow("Eye of a hurricane, listen to yourself churn,", 0); */
-      /* EditorRow *fifth = newRow("World serves its own needs, dummy serve your own needs", 0); */
-      /* EditorRow *sixth = newRow("Feed it off an aux speak, grunt no strength", 0); */
-      /* EditorRow *seventh = newRow("The ladder starts to clatter with fear of fight, down height", 0); */
-      /* RowList *forwards = rowListCons(first, */
-      /*   rowListCons(second, */
-      /*   rowListCons(third, */
-      /*   rowListCons(fourth, */
-      /*   rowListCons(fifth, */
-      /*   rowListCons(sixth, */
-      /*   rowListCons(seventh, NULL))))))); */
-      ZipperBuffer *buffer = malloc(sizeof(ZipperBuffer));
-      buffer->forwards = NULL;
-      buffer->backwards = NULL;
-      buffer->newest = NULL;
-      return buffer;
-    }
-
-    int testZipperBuffer() {
-      ZipperBuffer *buffer = exampleBuffer();
-      int i = 0;
-      printf("Starting off:\n");
-      printZipperBuffer(buffer);
-      while (1) {
-        printf("Iteration %d\n", ++i);
-        while (buffer->forwards != NULL) {
-          zipperForwardRow(buffer);
-        }
-        while (buffer->backwards != NULL) {
-          zipperBackwardRow(buffer);
-        }
-      }
-    }
-  #+end_src

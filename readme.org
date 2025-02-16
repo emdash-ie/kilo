@@ -1,13 +1,7 @@
 #+TITLE: Readme
 
-“Kibi” is a toy command-line editor, created by following [[https://viewsourcecode.org/snaptoken/kilo/][the snaptoken kilo
-tutorial]] and then making some tweaks (partly so I can make things more like
-Haskell). The main thing I’m having fun playing around with is using macros to
-make generic datastructures and functions (e.g. linked lists and functions like
-~zipWith~).
+“Kibi” is a toy command-line editor, created by following [[https://viewsourcecode.org/snaptoken/kilo/][the snaptoken kilo tutorial]] and then making some tweaks (partly so I can make things more like Haskell). The main thing I’m having fun playing around with is using macros to make generic datastructures and functions (e.g. linked lists and functions like ~zipWith~).
 
 * Repository structure
 
-This project is written as a literate program using org-mode. The org source code is in [[file:source][source]], and when tangled it produces C code in [[file:tangled][tangled]], which can then be compiled with make.
-
-[[file:source/kibi.org][kibi.org]] is the main file in the program.
+The C source code is in [[file:source][source]], which can be compiled with make. [[file:source/kibi.c][kibi.c]] is the main file in the program.
