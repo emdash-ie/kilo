@@ -50,7 +50,7 @@ Code for managing files.
 
     OperationResult *failure(char *message);
 
-    OperationResult success;
+    OperationResult *success();
 
     void onFailure(OperationResult *result, void (*f)(const char *, ...));
 
@@ -107,7 +107,12 @@ Code for managing files.
       return result;
     }
 
-    OperationResult success = {.type = Success, .errorMessage = ""};
+    OperationResult *success() {
+      OperationResult *result = malloc(sizeof(OperationResult));
+      result->type = Success;
+      result->errorMessage = "";
+      return result;
+    }
 
     void onFailure(OperationResult *result, void (*f)(const char *, ...)) {
       if (!isSuccess(result)) {
@@ -147,7 +152,7 @@ Code for managing files.
       file->cursorY = oldUndo->cursorY;
       file->undo = oldUndo->tail;
       free(oldUndo);
-      return &success;
+      return success();
     }
 
     OperationResult *editorRedo(FileData *file) {
@@ -162,6 +167,6 @@ Code for managing files.
       file->cursorY = oldRedo->cursorY;
       file->redo = oldRedo->tail;
       free(oldRedo);
-      return &success;
+      return success();
     }
   #+end_src
