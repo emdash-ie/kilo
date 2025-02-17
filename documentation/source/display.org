@@ -4,13 +4,12 @@ Code for managing a number of panes and drawing them to the screen.
 
 A display is a collection of panes, split into columns and rows: each column contains some number of rows, and each row contains some number of panes. At the root, a display contains one column, as well as a width and height.
 
-#+include: "./display.h" :lines "13-22" src c
+#+include: "../../source/display.h" :lines "13-22" src c
 
 The columns and rows are structured as linked list zippers, with the active row and pane separated from those above and below.
 
-#+include: "./display.h" :lines "22-33" src c
+#+include: "../../source/display.h" :lines "22-33" src c
 
 There are also some convenience functions for creating ~DisplayColumns~ and ~DisplayRows~:
 
-#+include: "./display.h" :lines "34-38" src c
-
+#+include: "../../source/display.h" :lines "34-38" src c

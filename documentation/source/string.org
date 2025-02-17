@@ -1,0 +1,19 @@
+#+TITLE: String
+
+A string type that includes its length.
+
+#+include: "../../source/string.h" :lines "3-7" src c
+
+Can create it from regular strings by calculating the length on creation:
+
+#+include: "../../source/string.h" :lines "8-9" src c
+
+#+include: "../../source/string.c" :lines "3-" src c
+
+Need ~<stddef.h>~ in the header for ~size_t~.
+
+#+include: "../../source/string.h" :lines "1-2" src c
+
+Need ~<string.h>~ in the body for ~strlen~.
+
+#+include: "../../source/string.c" :lines "2-3" src c

@@ -6,23 +6,22 @@ A serialisable representation for primitive file-editing actions, which can be l
 
 An edit is a change to the contents of the buffer: an insertion or deletion. Deleting is in terms of [[* Objects][objects]].
 
-#+include: "./edit.h::enum EditType" :lines "20-38" src c
+#+include: "../../source/edit.h::enum EditType" :lines "20-38" src c
 
 * Navigation Type
 
 A navigation is a movement of the cursor of the buffer.
 
-#+include: "./edit.h" :lines "8-19" src c
+#+include: "../../source/edit.h" :lines "8-19" src c
 
 * Objects
 
 A part of a buffer – like text objects in vim.
 
-#+include: "./edit.h" :lines "2-7" src c
+#+include: "../../source/edit.h" :lines "2-7" src c
 
 * ToString Functions
 
 Some functions for converting edits and navigations to strings, so they can be displayed in logs (and etc.).
 
-#+include: "./edit.h" :lines "39-" src c
-
+#+include: "../../source/edit.h" :lines "39-" src c

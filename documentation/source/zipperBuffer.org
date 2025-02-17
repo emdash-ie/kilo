@@ -2,45 +2,44 @@
 
 A representation of buffers (in-memory data from files) as a zipper (two linked lists, one holding the line the cursor is on and the lines after it, and one holding the lines before it in reverse order).
 
-#+include: "./zipperBuffer.h" :lines "33-40" src c
+#+include: "../../source/zipperBuffer.h" :lines "33-40" src c
 
 The idea behind using a zipper like this was that it would enable scrolling easily (by unconsing off one list and consing onto the other), but still be a persistent data structure so that an undo functionality could be implemented by holding on to old copies of the zipper. (~newest~ is used for memory management – that’ll be explained shortly.)
 
 A ~RowList~ is a singly-linked list of ~EditorRows~. (~number~ is used along with ~newest~.)
 
-#+include: "./zipperBuffer.h" :lines "9-16" src c
+#+include: "../../source/zipperBuffer.h" :lines "9-16" src c
 
 To construct ~RowLists~, there is ~rowListCons~, which combines a head and a tail. It also initialises ~number~, incrementing ~rowListId~ to give each cons cell a unique ID.
 
-#+include: "./zipperBuffer.c" :lines "15-24" src c
+#+include: "../../source/zipperBuffer.c" :lines "15-24" src c
 
 Since the implementation of the undo functionality holds onto old rowlists, those can’t be freed as the user scrolls: if the user scrolls down a line and the popped cons cell is freed, an undo might dereference an invalid pointer.
 
 However, scrolling isn’t an edit from the user’s perspective, so it doesn’t need to be possible to undo or redo it. Therefore, the newest thing that might be in the undo history is the newer of ~(backwards, forwards)~ just after the last edit.
 
-#+include: "./zipperBuffer.c" :lines "121-129" src c
+#+include: "../../source/zipperBuffer.c" :lines "121-129" src c
 
-#+include: "./zipperBuffer.c" :lines "25-37" src c
+#+include: "../../source/zipperBuffer.c" :lines "25-37" src c
 
 Question to answer: in ~rowListNewer~, what’s the thinking behind the treatment of ~NULL~? It seems weird that ~NULL~ would be newer than itself, but it looks like a deliberate choice. (Everything else being newer than ~NULL~ seems reasonable.)
 
 This means when scrolling (forwards or backwards), anything newer than ~newest~ can be freed:
 
-#+include: "./zipperBuffer.c" :lines "60-72" src c
+#+include: "../../source/zipperBuffer.c" :lines "60-72" src c
 
-#+include: "./zipperBuffer.c" :lines "79-91" src c
+#+include: "../../source/zipperBuffer.c" :lines "79-91" src c
 
-#+include: "./zipperBuffer.c" :lines "73-78" src c
+#+include: "../../source/zipperBuffer.c" :lines "73-78" src c
 
-#+include: "./zipperBuffer.c" :lines "92-97" src c
+#+include: "../../source/zipperBuffer.c" :lines "92-97" src c
 
 Inserting content is straightforward: create a cons cell with the new row and the current ~forward~ list, update the buffer’s ~forwards~ pointer, and update ~newest~.
 
-#+include: "./zipperBuffer.c" :lines "98-104" src c
+#+include: "../../source/zipperBuffer.c" :lines "98-104" src c
 
 In order to display content on the screen, it’s helpful to get the lines from a certain point (e.g. the top of the screen). If the index is at or in front of the cursor, just drop ~index~ rows. Otherwise, scroll backwards until it is (remembering to update ~newest~ – now that these lines are being used by other code, they can’t be freed on scroll), and then scroll forward again.
 
-#+include: "./zipperBuffer.c" :lines "105-120" src c
+#+include: "../../source/zipperBuffer.c" :lines "105-120" src c
 
-#+include: "./zipperBuffer.c" :lines "7-14" src c
-
+#+include: "../../source/zipperBuffer.c" :lines "7-14" src c

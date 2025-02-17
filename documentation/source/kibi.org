@@ -4,13 +4,13 @@
 
 In the main loop, the editor runs a single process, which runs in a loop, alternately refreshing the screen and processing user input, blocking until the input is available.
 
-#+include: "./kibi.c" :lines "1090-1094" src c
+#+include: "../../source/kibi.c" :lines "1090-1094" src c
 
 * main
 
 The main function [[*Raw Mode][puts the terminal into raw mode]], reads the command line arguments, sets up the editor, and then enters the main loop.
 
-#+include: "./kibi.c" :lines "1065-" src c
+#+include: "../../source/kibi.c" :lines "1065-" src c
 
 * Raw Mode
 
@@ -18,7 +18,6 @@ The program puts the terminal into raw mode to get more control of the screen, w
 
 I don’t really know much about the details. The code gets the current terminal settings, stores them, then makes a modified copy to set. It also arranges for ~disableRawMode~ to be called when the program exits.
 
-#+include: "./kibi.c" :lines "105-123" src c
+#+include: "../../source/kibi.c" :lines "105-123" src c
 
-#+include: "./kibi.c" :lines "99-104" src c
-
+#+include: "../../source/kibi.c" :lines "99-104" src c
